@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
-import { EnvelopeIcon, LockClosedIcon, UserIcon, PhoneIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { EnvelopeIcon, LockClosedIcon, UserIcon, PhoneIcon, EyeIcon, EyeSlashIcon, DocumentPlusIcon, DocumentIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register: registerUser, isAuthenticated } = useAuth();
+  const { registerWithCV, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [cvFile, setCvFile] = useState(null);
+  const [cvError, setCvError] = useState(null);
   const { register, handleSubmit, formState: { errors }, watch } = useForm();
   
   // Redirection si déjà connecté
@@ -21,20 +23,48 @@ const Register = () => {
 
   const password = watch('password');
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        setCvError('Format non supporté (PDF, DOC, DOCX uniquement)');
+        setCvFile(null);
+      } else if (file.size > 5 * 1024 * 1024) {
+        setCvError('Fichier trop lourd (max 5Mo)');
+        setCvFile(null);
+      } else {
+        setCvFile(file);
+        setCvError(null);
+      }
+    }
+  };
+
+  const removeFile = () => {
+    setCvFile(null);
+    setCvError(null);
+  };
+
   const onSubmit = async (data) => {
+    if (!cvFile) {
+      setCvError('Le CV est obligatoire pour l\'inscription');
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await registerUser({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-        phone: data.phone
-        // Le rôle est forcé à 'intern' dans le backend
-      });
+      const formData = new FormData();
+      formData.append('firstName', data.firstName);
+      formData.append('lastName', data.lastName);
+      formData.append('email', data.email);
+      formData.append('password', data.password);
+      formData.append('phone', data.phone || '');
+      formData.append('cv', cvFile);
+      formData.append('appliedFor', 'internship'); // Doit correspondre à l'enum du backend ['internship', 'training', 'job']
+
+      const result = await registerWithCV(formData);
       
       if (result.success) {
-        // Rediriger vers la page d'attente au lieu du dashboard
         navigate('/registration-pending', { replace: true });
       }
     } catch (error) {
@@ -163,6 +193,56 @@ const Register = () => {
               </div>
             </div>
 
+            {/* CV Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Votre CV (PDF, Word) *
+              </label>
+              {!cvFile ? (
+                <div className={`relative border-2 border-dashed rounded-xl p-6 transition-all duration-300 ${cvError ? 'border-red-300 bg-red-50 dark:bg-red-900/10' : 'border-gray-200 dark:border-gray-700 hover:border-primary-400 bg-gray-50/50 dark:bg-gray-800/30'}`}>
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="text-center">
+                    <DocumentPlusIcon className={`mx-auto h-10 w-10 ${cvError ? 'text-red-400' : 'text-gray-400'}`} />
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      Cliquez ou glissez votre CV ici
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      PDF, DOC ou DOCX jusqu'à 5Mo
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-4 bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-xl">
+                  <div className="flex items-center min-w-0">
+                    <DocumentIcon className="h-8 w-8 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+                    <div className="ml-3 truncate">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {cvFile.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {(cvFile.size / 1024 / 1024).toFixed(2)} Mo
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeFile}
+                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+              {cvError && (
+                <p className="mt-1 text-sm text-red-600">{cvError}</p>
+              )}
+            </div>
+
             {/* Mot de passe */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -244,9 +324,9 @@ const Register = () => {
             </div>
 
             {/* Message d'information */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-sm text-blue-800 dark:text-blue-300">
-                <span className="font-bold">Note :</span> Après inscription, votre compte devra être approuvé par un administrateur avant de pouvoir vous connecter.
+            <div className="bg-primary-50 dark:bg-primary-900/10 border border-primary-100 dark:border-primary-800 rounded-xl p-4">
+              <p className="text-xs text-primary-700 dark:text-primary-300 leading-relaxed">
+                <span className="font-bold">Note importante :</span> Votre inscription constitue une candidature. Un administrateur examinera votre CV avant de valider l'accès à votre espace stagiaire.
               </p>
             </div>
 

@@ -17,8 +17,6 @@ const InternForm = () => {
     phone: '',
     studentId: '',
     school: '',
-    major: '',
-    startDate: '',
     endDate: '',
     status: 'pending'
   });
@@ -69,7 +67,7 @@ const InternForm = () => {
       }
       navigate('/interns');
     } catch (error) {
-      toast.error('Erreur lors de la sauvegarde');
+      toast.error(error.response?.data?.message || 'Erreur lors de la sauvegarde');
     } finally {
       setLoading(false);
     }

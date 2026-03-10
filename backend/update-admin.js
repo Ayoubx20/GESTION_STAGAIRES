@@ -13,7 +13,7 @@ async function updateAdmin() {
 
     // Mettre à jour l'admin avec l'ID spécifique
     const adminId = '69ab5f6fe774967caec97ea2';
-    
+
     const updatedAdmin = await User.findByIdAndUpdate(
       adminId,
       {
@@ -22,7 +22,7 @@ async function updateAdmin() {
           isApproved: true
         }
       },
-      { new: true } // Retourner le document mis à jour
+      { returnDocument: 'after' } // Retourner le document mis à jour
     );
 
     if (updatedAdmin) {

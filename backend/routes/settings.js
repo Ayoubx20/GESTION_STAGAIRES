@@ -67,9 +67,9 @@ router.put('/', auth, async (req, res) => {
       });
 
       if (Object.keys(globalData).length > 0) {
-        await Settings.findOneAndUpdate({}, globalData, { 
-          new: true, 
-          upsert: true 
+        await Settings.findOneAndUpdate({}, globalData, {
+          returnDocument: 'after',
+          upsert: true
         });
       }
     }
@@ -91,7 +91,7 @@ router.put('/', auth, async (req, res) => {
     const personalSettings = await UserSettings.findOneAndUpdate(
       { user: req.user.id },
       { $set: personalData },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: 'after', upsert: true, runValidators: true }
     );
 
     // Get fresh global settings to return combined object

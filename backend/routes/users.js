@@ -8,22 +8,59 @@ router.get('/', auth, async (req, res) => {
   try {
     // Vérifier si l'utilisateur est admin
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Accès non autorisé' 
+      return res.status(403).json({
+        success: false,
+        message: 'Accès non autorisé'
       });
     }
 
     const users = await User.find({}).select('-password');
-    res.json({ 
-      success: true, 
-      users 
+    res.json({
+      success: true,
+      users
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Admin creation route
+router.post('/', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'Non autorisé' });
+    const { email, password, firstName, lastName, role, phone } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un utilisateur avec cet email existe déjà'
+      });
+    }
+
+    const user = await User.create({
+      email,
+      password,
+      firstName,
+      lastName,
+      role,
+      phone,
+      isActive: true,
+      isApproved: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Utilisateur créé avec succès',
+      user: { id: user._id, email, firstName, lastName, role }
+    });
+  } catch (error) {
+    console.error('Erreur creation utilisateur:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur lors de la création de l\'utilisateur'
     });
   }
 });
@@ -33,20 +70,20 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Utilisateur non trouvé' 
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
       });
     }
-    res.json({ 
-      success: true, 
-      user 
+    res.json({
+      success: true,
+      user
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 });
@@ -55,28 +92,28 @@ router.get('/:id', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Accès non autorisé' 
-      });
+      return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body },
-      { new: true, runValidators: true }
-    ).select('-password');
+    const { firstName, lastName, email, role, phone, password } = req.body;
+    const user = await User.findById(req.params.id);
 
-    res.json({ 
-      success: true, 
-      user 
-    });
+    if (!user) return res.status(404).json({ success: false, message: 'Non trouvé' });
+
+    user.firstName = firstName || user.firstName;
+    user.lastName = lastName || user.lastName;
+    user.email = email || user.email;
+    user.role = role || user.role;
+    user.phone = phone || user.phone;
+
+    if (password && password.trim() !== '') {
+      user.password = password;
+    }
+
+    await user.save();
+    res.json({ success: true, user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
-    });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
@@ -84,23 +121,36 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Accès non autorisé' 
+      return res.status(403).json({
+        success: false,
+        message: 'Accès non autorisé'
       });
     }
 
     await User.findByIdAndDelete(req.params.id);
-    res.json({ 
-      success: true, 
-      message: 'Utilisateur supprimé' 
+    res.json({
+      success: true,
+      message: 'Utilisateur supprimé'
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
+  }
+});
+// Toggle user status
+router.patch('/:id/status', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Non autorisé' });
+    }
+    const { isActive } = req.body;
+    const user = await User.findByIdAndUpdate(req.params.id, { isActive }, { returnDocument: 'after' }).select('-password');
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
@@ -129,7 +179,7 @@ router.put('/:id/settings', auth, async (req, res) => {
     const settings = await UserSettings.findOneAndUpdate(
       { user: req.params.id },
       { $set: req.body },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
     res.json({ success: true, settings });
   } catch (error) {

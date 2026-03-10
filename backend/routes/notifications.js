@@ -23,7 +23,7 @@ router.get('/navbar', auth, async (req, res) => {
     const notifications = await Notification.find({ recipient: req.user.id })
       .sort({ createdAt: -1 })
       .limit(10);
-    
+
     const unreadNotifications = await Notification.countDocuments({ recipient: req.user.id, read: false });
 
     // Messages
@@ -55,7 +55,7 @@ router.patch('/:id/read', auth, async (req, res) => {
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, recipient: req.user.id },
       { read: true },
-      { new: true }
+      { returnDocument: 'after' }
     );
     res.json({ success: true, notification });
   } catch (error) {

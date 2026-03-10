@@ -17,7 +17,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   UserGroupIcon,
-  ClockIcon 
+  ClockIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = () => {
@@ -32,7 +33,6 @@ const Sidebar = () => {
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
     { name: t('interns'), to: '/interns', icon: UsersIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
-    { name: 'Départements', to: '/departments', icon: BuildingOfficeIcon },
     { name: 'Rapports', to: '/reports', icon: ChartBarIcon },
   ];
 
@@ -40,12 +40,13 @@ const Sidebar = () => {
   const internNavigation = [
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
+    { name: 'Mes Documents', to: '/my-documents', icon: DocumentTextIcon },
   ];
 
   // Navigation ADMIN SEULEMENT
   const adminNavigation = isAdmin ? [
     { name: 'Utilisateurs', to: '/users', icon: UserGroupIcon },
-    { name: 'Approbations', to: '/approvals', icon: ClockIcon }, 
+    { name: 'Approbations', to: '/approvals', icon: ClockIcon },
   ] : [];
 
   const bottomNavigation = [
@@ -83,12 +84,12 @@ const Sidebar = () => {
           </div>
         ) : (
           <div className="flex items-center space-x-2 px-6">
-             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary-600 to-indigo-600 flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-sm">GS</span>
-             </div>
-             <h1 className="text-lg font-black bg-gradient-to-r from-primary-600 via-primary-500 to-indigo-600 bg-clip-text text-transparent tracking-tight">
-               GESTION <span className="text-gray-400 dark:text-gray-500 font-medium">STAGIAIRE</span>
-             </h1>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary-600 to-indigo-600 flex items-center justify-center shadow-md">
+              <span className="text-white font-bold text-sm">GS</span>
+            </div>
+            <h1 className="text-lg font-black bg-gradient-to-r from-primary-600 via-primary-500 to-indigo-600 bg-clip-text text-transparent tracking-tight">
+              GESTION <span className="text-gray-400 dark:text-gray-500 font-medium">STAGIAIRE</span>
+            </h1>
           </div>
         )}
       </div>
@@ -100,10 +101,9 @@ const Sidebar = () => {
             key={item.name}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActive
-                  ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
+                ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`
             }
           >
@@ -118,10 +118,9 @@ const Sidebar = () => {
             key={item.name}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActive
-                  ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
+                ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`
             }
           >
@@ -151,10 +150,9 @@ const Sidebar = () => {
             key={item.name}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                isActive
-                  ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
+                ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`
             }
           >
@@ -162,7 +160,7 @@ const Sidebar = () => {
             {!collapsed && item.name}
           </NavLink>
         ))}
-        
+
         <button
           onClick={handleLogout}
           className="w-full flex items-center px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

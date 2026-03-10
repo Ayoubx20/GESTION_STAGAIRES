@@ -3,27 +3,65 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Intern = require('../models/Intern');
 const User = require('../models/User');
+const upload = require('../middleware/upload');
 
 // @desc    Get all interns
 // @route   GET /api/interns
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const interns = await Intern.find()
+    const { page = 1, limit = 10, search = '', status = '', department = '', school = '' } = req.query;
+    const query = {};
+
+    // Filter by status
+    if (status) query.status = status;
+
+    // Filter by school
+    if (school) query.school = new RegExp(school, 'i');
+
+    // Filter by department
+    if (department) query.department = department;
+
+    // Search by name/email (requires joining with User)
+    let userIds = [];
+    if (search) {
+      const users = await User.find({
+        $or: [
+          { firstName: new RegExp(search, 'i') },
+          { lastName: new RegExp(search, 'i') },
+          { email: new RegExp(search, 'i') }
+        ]
+      }).select('_id');
+      userIds = users.map(u => u._id);
+      query.user = { $in: userIds };
+    }
+
+    // Role-based filtering: Supervisors only see their own interns
+    if (req.user.role === 'supervisor') {
+      query.supervisor = req.user.id;
+    }
+
+    const total = await Intern.countDocuments(query);
+    const interns = await Intern.find(query)
       .populate('user', 'firstName lastName email phone')
-      .populate('supervisor', 'firstName lastName email');
-    
+      .populate('supervisor', 'firstName lastName email')
+      .populate('department', 'name')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+
     res.json({
       success: true,
       count: interns.length,
+      total,
+      pages: Math.ceil(total / limit),
+      page: parseInt(page),
       interns
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la récupération des stagiaires'
-    });
+    res.status(500).json({ success: false, message: 'Erreur lors de la récupération' });
   }
 });
 
@@ -34,15 +72,16 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const intern = await Intern.findById(req.params.id)
       .populate('user', 'firstName lastName email phone')
-      .populate('supervisor', 'firstName lastName email');
-    
+      .populate('supervisor', 'firstName lastName email')
+      .populate('department', 'name');
+
     if (!intern) {
       return res.status(404).json({
         success: false,
         message: 'Stagiaire non trouvé'
       });
     }
-    
+
     res.json({
       success: true,
       intern
@@ -71,20 +110,41 @@ router.post('/', auth, async (req, res) => {
       major,
       startDate,
       endDate,
-      supervisor
+      supervisor,
+      department
     } = req.body;
 
-    // Create user account for intern
+    // 1. Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un utilisateur avec cet email existe déjà'
+      });
+    }
+
+    // 2. Check if studentId already exists
+    const existingIntern = await Intern.findOne({ studentId });
+    if (existingIntern) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce numéro étudiant est déjà utilisé'
+      });
+    }
+
+    // 3. Create user account for intern
     const user = await User.create({
       firstName,
       lastName,
       email,
-      password: 'password123', // Default password, should be changed on first login
+      password: 'password123', // Default password
       phone,
-      role: 'intern'
+      role: 'intern',
+      isApproved: true,
+      isActive: true
     });
 
-    // Create intern profile
+    // 4. Create intern profile
     const intern = await Intern.create({
       user: user._id,
       studentId,
@@ -93,7 +153,8 @@ router.post('/', auth, async (req, res) => {
       startDate,
       endDate,
       supervisor: supervisor || req.user.id,
-      status: 'pending'
+      department,
+      status: 'active'
     });
 
     res.status(201).json({
@@ -102,10 +163,10 @@ router.post('/', auth, async (req, res) => {
       intern
     });
   } catch (error) {
-    console.error(error);
+    console.error('Erreur creation stagiaire:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur lors de la création du stagiaire'
+      message: error.message || 'Erreur lors de la création du stagiaire'
     });
   }
 });
@@ -118,7 +179,7 @@ router.put('/:id', auth, async (req, res) => {
     const intern = await Intern.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!intern) {
@@ -148,7 +209,7 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const intern = await Intern.findById(req.params.id);
-    
+
     if (!intern) {
       return res.status(404).json({
         success: false,
@@ -158,7 +219,7 @@ router.delete('/:id', auth, async (req, res) => {
 
     // Delete associated user account
     await User.findByIdAndDelete(intern.user);
-    
+
     // Delete intern
     await intern.deleteOne();
 
@@ -181,11 +242,11 @@ router.delete('/:id', auth, async (req, res) => {
 router.patch('/:id/status', auth, async (req, res) => {
   try {
     const { status } = req.body;
-    
+
     const intern = await Intern.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     res.json({
@@ -198,6 +259,111 @@ router.patch('/:id/status', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la mise à jour du statut'
+    });
+  }
+});
+
+// @desc    Get current intern profile
+// @route   GET /api/interns/me/profile
+// @access  Private
+router.get('/me/profile', auth, async (req, res) => {
+  try {
+    const intern = await Intern.findOne({ user: req.user.id })
+      .populate('user', 'firstName lastName email phone')
+      .populate('supervisor', 'firstName lastName email')
+      .populate('department', 'name');
+
+    if (!intern) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil stagiaire non trouvé'
+      });
+    }
+
+    res.json({
+      success: true,
+      intern
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération du profil'
+    });
+  }
+});
+
+// @desc    Add document to intern profile
+// @route   POST /api/interns/me/documents
+// @access  Private
+router.post('/me/documents', auth, upload.single('document'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucun fichier fourni'
+      });
+    }
+
+    const intern = await Intern.findOne({ user: req.user.id });
+    if (!intern) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil stagiaire non trouvé'
+      });
+    }
+
+    const newDocument = {
+      name: req.body.name || req.file.originalname,
+      url: `/uploads/${req.file.filename}`,
+      uploadedAt: new Date()
+    };
+
+    intern.documents.push(newDocument);
+    await intern.save();
+
+    res.json({
+      success: true,
+      message: 'Document ajouté avec succès',
+      document: intern.documents[intern.documents.length - 1]
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'ajout du document'
+    });
+  }
+});
+
+// @desc    Delete document from intern profile
+// @route   DELETE /api/interns/me/documents/:docId
+// @access  Private
+router.delete('/me/documents/:docId', auth, async (req, res) => {
+  try {
+    const intern = await Intern.findOne({ user: req.user.id });
+    if (!intern) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profil stagiaire non trouvé'
+      });
+    }
+
+    intern.documents = intern.documents.filter(
+      doc => doc._id.toString() !== req.params.docId
+    );
+
+    await intern.save();
+
+    res.json({
+      success: true,
+      message: 'Document supprimé avec succès'
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la suppression du document'
     });
   }
 });

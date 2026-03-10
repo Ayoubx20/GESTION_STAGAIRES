@@ -77,7 +77,7 @@ const Interns = () => {
         ...filters,
         search: searchTerm
       });
-      
+
       if (Array.isArray(data)) {
         setInterns(data);
         setPagination(prev => ({ ...prev, total: data.length, pages: Math.ceil(data.length / prev.limit) }));
@@ -135,7 +135,7 @@ const Interns = () => {
     }
 
     if (selectedInterns.length === 0) return;
-    
+
     if (!window.confirm(`Voulez-vous supprimer ${selectedInterns.length} stagiaire(s) ?`)) {
       return;
     }
@@ -204,9 +204,9 @@ const Interns = () => {
             Gestion des Stagiaires
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
-            {isAdmin ? 'Gérez tous les stagiaires de votre plateforme' : 
-             isSupervisor ? 'Gérez les stagiaires sous votre supervision' : 
-             'Consultez la liste des stagiaires'}
+            {isAdmin ? 'Gérez tous les stagiaires de votre plateforme' :
+              isSupervisor ? 'Gérez les stagiaires sous votre supervision' :
+                'Consultez la liste des stagiaires'}
           </p>
         </div>
         <div className="flex space-x-3">
@@ -238,9 +238,8 @@ const Interns = () => {
                       {({ active }) => (
                         <button
                           onClick={() => handleExport('csv')}
-                          className={`${
-                            active ? 'bg-gray-100 dark:bg-gray-700' : ''
-                          } group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg`}
+                          className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''
+                            } group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg`}
                         >
                           Exporter en CSV
                         </button>
@@ -250,9 +249,8 @@ const Interns = () => {
                       {({ active }) => (
                         <button
                           onClick={() => handleExport('excel')}
-                          className={`${
-                            active ? 'bg-gray-100 dark:bg-gray-700' : ''
-                          } group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg`}
+                          className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''
+                            } group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg`}
                         >
                           Exporter en Excel
                         </button>
@@ -262,9 +260,8 @@ const Interns = () => {
                       {({ active }) => (
                         <button
                           onClick={() => handleExport('pdf')}
-                          className={`${
-                            active ? 'bg-gray-100 dark:bg-gray-700' : ''
-                          } group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg`}
+                          className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''
+                            } group flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 rounded-lg`}
                         >
                           Exporter en PDF
                         </button>
@@ -391,12 +388,12 @@ const Interns = () => {
         </div>
       )}
 
-    {/* Grid of Floating Cards */}
+      {/* Grid of Floating Cards */}
       {interns.length === 0 ? (
         <EmptyState
           title="Aucun stagiaire"
-          description={isAdmin || isSupervisor ? 
-            "Commencez par ajouter votre premier stagiaire." : 
+          description={isAdmin || isSupervisor ?
+            "Commencez par ajouter votre premier stagiaire." :
             "Aucun stagiaire n'est actuellement enregistré."}
           action={(isAdmin || isSupervisor) ? () => window.location.href = '/interns/new' : null}
           actionText="Ajouter un stagiaire"
@@ -460,7 +457,7 @@ const Interns = () => {
                       <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">Département</p>
                       <div className="flex items-center text-xs font-semibold text-gray-700 dark:text-gray-300">
                         <BuildingOfficeIcon className="w-3.5 h-3.5 mr-1.5 text-primary-500" />
-                        {intern.department?.name || 'Non assigné'}
+                        {intern.major || 'Non spécifié'}
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -478,7 +475,7 @@ const Interns = () => {
                       <span className="text-primary-600">{Math.round(progress)}%</span>
                     </div>
                     <div className="h-2 w-full bg-gray-100 dark:bg-gray-700/50 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-gradient-to-r from-primary-500 to-indigo-600 rounded-full transition-all duration-1000 ease-out"
                         style={{ width: `${progress}%` }}
                       ></div>
@@ -494,7 +491,7 @@ const Interns = () => {
                         {intern.user?.email}
                       </span>
                     </div>
-                    
+
                     {/* Action Button - Floating Menu */}
                     <Menu as="div" className="relative">
                       <Menu.Button className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 text-gray-500 hover:text-primary-600 transition-all">
@@ -571,11 +568,11 @@ const Interns = () => {
 
                 {/* Supervisor Indicator Corner */}
                 {intern.supervisor && (
-                   <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none overflow-hidden rounded-tr-3xl">
-                      <div className="absolute top-[-8px] right-[-32px] w-24 h-6 bg-indigo-500/10 dark:bg-indigo-400/10 rotate-45 flex items-center justify-center">
-                         <span className="text-[8px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest translate-y-1">Supervisé</span>
-                      </div>
-                   </div>
+                  <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none overflow-hidden rounded-tr-3xl">
+                    <div className="absolute top-[-8px] right-[-32px] w-24 h-6 bg-indigo-500/10 dark:bg-indigo-400/10 rotate-45 flex items-center justify-center">
+                      <span className="text-[8px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest translate-y-1">Supervisé</span>
+                    </div>
+                  </div>
                 )}
               </div>
             );

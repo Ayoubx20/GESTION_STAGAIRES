@@ -89,6 +89,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const registerWithCV = async (formData) => {
+    try {
+      const response = await api.post('/auth/register-with-cv', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      toast.success(response.message || 'Candidature envoyée avec succès !');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || "Erreur lors de l'envoi de la candidature";
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -114,6 +131,7 @@ export const AuthProvider = ({ children }) => {
     user,
     login,
     register,
+    registerWithCV,
     logout,
     loading,
     isAuthenticated: !!user,

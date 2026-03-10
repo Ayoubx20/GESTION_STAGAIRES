@@ -374,7 +374,7 @@ exports.registerWithCV = async (req, res) => {
     
     res.status(500).json({ 
       success: false, 
-      message: 'Erreur serveur' 
+      message: error.message || 'Erreur serveur' 
     });
   }
 };

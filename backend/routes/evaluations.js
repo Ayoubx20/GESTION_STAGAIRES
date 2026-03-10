@@ -21,7 +21,7 @@ router.get('/intern/:internId', auth, async (req, res) => {
     const evaluations = await Evaluation.find({ intern: req.params.internId })
       .populate('supervisor', 'firstName lastName')
       .sort({ createdAt: -1 });
-    
+
     res.json({ success: true, evaluations });
   } catch (err) {
     console.error(err.message);
@@ -76,7 +76,7 @@ router.put('/:id', [auth, isPrivileged], async (req, res) => {
     evaluation = await Evaluation.findByIdAndUpdate(
       req.params.id,
       { $set: { ratings, feedback, goals, nextPeriodGoals, status } },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     res.json({ success: true, evaluation });

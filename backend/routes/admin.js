@@ -8,16 +8,16 @@ const isAdmin = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
     if (user.role !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Accès non autorisé - Admin seulement' 
+      return res.status(403).json({
+        success: false,
+        message: 'Accès non autorisé - Admin seulement'
       });
     }
     next();
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 };
@@ -27,11 +27,20 @@ const isAdmin = async (req, res, next) => {
 // @access  Private (Admin only)
 router.get('/pending-interns', auth, isAdmin, async (req, res) => {
   try {
-    const pendingInterns = await User.find({ 
-      role: 'intern', 
-      isApproved: false,
-      isActive: true 
-    }).select('-password');
+    const pendingUsers = await User.find({
+      role: 'intern',
+      isApproved: false
+    }).select('-password').lean();
+
+    const Application = require('../models/Application');
+    // On récupère les candidatures pour ces utilisateurs
+    const usersWithApps = await Promise.all(pendingUsers.map(async (u) => {
+      const app = await Application.findOne({ user: u._id }).sort({ createdAt: -1 });
+      return {
+        ...u,
+        application: app
+      };
+    }));
 
     const SiteStat = require('../models/SiteStat');
     const monthId = new Date().toISOString().slice(0, 7); // Format: YYYY-MM
@@ -39,8 +48,8 @@ router.get('/pending-interns', auth, isAdmin, async (req, res) => {
 
     res.json({
       success: true,
-      count: pendingInterns.length,
-      interns: pendingInterns,
+      count: usersWithApps.length,
+      interns: usersWithApps,
       stats: {
         approvedMonth: currentStats.approvedCount,
         rejectedMonth: currentStats.rejectedCount
@@ -48,9 +57,9 @@ router.get('/pending-interns', auth, isAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erreur:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 });
@@ -61,18 +70,18 @@ router.get('/pending-interns', auth, isAdmin, async (req, res) => {
 router.put('/approve-intern/:id', auth, isAdmin, async (req, res) => {
   try {
     const intern = await User.findById(req.params.id);
-    
+
     if (!intern) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Stagiaire non trouvé' 
+      return res.status(404).json({
+        success: false,
+        message: 'Stagiaire non trouvé'
       });
     }
 
     if (intern.role !== 'intern') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cet utilisateur n\'est pas un stagiaire' 
+      return res.status(400).json({
+        success: false,
+        message: 'Cet utilisateur n\'est pas un stagiaire'
       });
     }
 
@@ -83,7 +92,7 @@ router.put('/approve-intern/:id', auth, isAdmin, async (req, res) => {
     // Vérifier si le profil de stagiaire existe déjà pour éviter les doublons
     const Intern = require('../models/Intern');
     const existingInternProfile = await Intern.findOne({ user: intern._id });
-    
+
     if (!existingInternProfile) {
       // Créer automatiquement le profil stagiaire
       await Intern.create({
@@ -104,7 +113,7 @@ router.put('/approve-intern/:id', auth, isAdmin, async (req, res) => {
     await SiteStat.findOneAndUpdate(
       { monthId },
       { $inc: { approvedCount: 1 } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     res.json({
@@ -120,26 +129,43 @@ router.put('/approve-intern/:id', auth, isAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erreur:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 });
 
-// @desc    Rejeter un stagiaire (optionnel)
-// @route   DELETE /api/admin/reject-intern/:id
+// @desc    Rejeter une candidature (sans supprimer l'utilisateur)
+// @route   PUT /api/admin/reject-intern/:id
 // @access  Private (Admin only)
-router.delete('/reject-intern/:id', auth, isAdmin, async (req, res) => {
+router.put('/reject-intern/:id', auth, isAdmin, async (req, res) => {
   try {
-    const intern = await User.findByIdAndDelete(req.params.id);
-    
+    const intern = await User.findById(req.params.id);
+
     if (!intern) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Stagiaire non trouvé' 
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
       });
     }
+
+    // Mettre à jour le statut de la candidature
+    const Application = require('../models/Application');
+    await Application.findOneAndUpdate(
+      { user: intern._id },
+      {
+        status: 'rejected',
+        reviewedAt: new Date(),
+        reviewedBy: req.user.id,
+        // Si l'application n'existe pas (ancien utilisateur), on en crée une basique
+        cvUrl: '/uploads/not-provided',
+        cvName: 'Non fourni'
+      },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    // L'utilisateur reste isApproved: false et isActive: false
 
     // Mettre à jour les statistiques
     const SiteStat = require('../models/SiteStat');
@@ -147,19 +173,43 @@ router.delete('/reject-intern/:id', auth, isAdmin, async (req, res) => {
     await SiteStat.findOneAndUpdate(
       { monthId },
       { $inc: { rejectedCount: 1 } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     res.json({
       success: true,
-      message: 'Stagiaire rejeté et supprimé'
+      message: 'Candidature rejetée. L\'utilisateur est conservé dans la liste des rejets.'
     });
   } catch (error) {
     console.error('❌ Erreur:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
+  }
+});
+
+// @desc    Restaurer un stagiaire rejeté vers "En attente"
+// @route   PUT /api/admin/restore-intern/:id
+// @access  Private (Admin only)
+router.put('/restore-intern/:id', auth, isAdmin, async (req, res) => {
+  try {
+    const intern = await User.findById(req.params.id);
+    if (!intern) return res.status(404).json({ success: false, message: 'Non trouvé' });
+
+    const Application = require('../models/Application');
+    await Application.findOneAndUpdate(
+      { user: intern._id },
+      { status: 'pending' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Candidature restaurée en attente'
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
@@ -179,9 +229,9 @@ router.get('/all-interns', auth, isAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erreur:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 });

@@ -12,7 +12,8 @@ import {
   EyeIcon,
   XCircleIcon,
   CheckCircleIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
@@ -88,7 +89,7 @@ const Users = () => {
         await api.put(`/users/${editingUser._id}`, formData);
         toast.success('Utilisateur modifié avec succès');
       } else {
-        await api.post('/auth/register', formData);
+        await api.post('/users', formData);
         toast.success('Superviseur créé avec succès');
       }
       setShowModal(false);
@@ -144,6 +145,7 @@ const Users = () => {
     }
   };
 
+
   const getRoleBadge = (role) => {
     const roleConfig = {
       admin: { class: 'badge-danger', label: 'Admin' },
@@ -181,7 +183,7 @@ const Users = () => {
             Gestion des Utilisateurs
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
-            Gérez les superviseurs et administrateurs
+            Gérez les superviseurs et Stagiaires
           </p>
         </div>
         <button
@@ -200,7 +202,7 @@ const Users = () => {
           className="btn-primary"
         >
           <UserPlusIcon className="w-5 h-5 mr-2" />
-          Nouveau superviseur
+          Nouvel utilisateur
         </button>
       </div>
 
@@ -217,100 +219,99 @@ const Users = () => {
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-white/50 dark:border-white/10 overflow-hidden opacity-0 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Utilisateur</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Contact</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Rôle</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Statut</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Date d'inscription</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white w-32">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {users.map((user) => (
-                <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
-                        {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {user.firstName} {user.lastName}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-<td className="px-6 py-4">
-                    <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                      <EnvelopeIcon className="w-4 h-4 mr-2" />
-                      {user.email}
-                    </div>
-                  </td>
-<td className="px-6 py-4">
-                    {getRoleBadge(user.role)}
-                  </td>
-<td className="px-6 py-4">
-                    {user.isActive ? (
-                      <span className="badge badge-success flex items-center w-fit">
-                        <CheckCircleIcon className="w-3 h-3 mr-1" />
-                        Actif
-                      </span>
-                    ) : (
-                      <span className="badge badge-danger flex items-center w-fit">
-                        <XCircleIcon className="w-3 h-3 mr-1" />
-                        Inactif
-                      </span>
-                    )}
-                  </td>
-<td className="px-6 py-4">
-                    {new Date(user.createdAt).toLocaleDateString('fr-FR')}
-                  </td>
-<td className="px-6 py-4">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEdit(user)}
-                        className="p-1 hover:bg-gray-100 rounded-lg"
-                        title="Modifier"
-                      >
-                        <PencilIcon className="w-5 h-5 text-gray-500" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenSettings(user)}
-                        className="p-1 hover:bg-gray-100 rounded-lg text-primary-600"
-                        title="Paramètres de l'utilisateur"
-                      >
-                        <Cog6ToothIcon className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(user._id, user.isActive)}
-                        className={`p-1 hover:bg-gray-100 rounded-lg ${
-                          user.isActive ? 'text-yellow-600' : 'text-green-600'
-                        }`}
-                        title={user.isActive ? 'Désactiver' : 'Activer'}
-                      >
-                        {user.isActive ? (
-                          <XCircleIcon className="w-5 h-5" />
-                        ) : (
-                          <CheckCircleIcon className="w-5 h-5" />
-                        )}
-                      </button>
-                      {user.role !== 'admin' && (
-                        <button
-                          onClick={() => handleDelete(user._id)}
-                          className="p-1 hover:bg-gray-100 rounded-lg text-red-600"
-                          title="Supprimer"
-                        >
-                          <TrashIcon className="w-5 h-5" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Utilisateur</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Contact</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Rôle</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Statut</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Date d'inscription</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white w-32">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {users.map((user) => (
+                  <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold">
+                          {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {user.firstName} {user.lastName}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <EnvelopeIcon className="w-4 h-4 mr-2" />
+                        {user.email}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {getRoleBadge(user.role)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.isActive ? (
+                        <span className="badge badge-success flex items-center w-fit">
+                          <CheckCircleIcon className="w-3 h-3 mr-1" />
+                          Actif
+                        </span>
+                      ) : (
+                        <span className="badge badge-danger flex items-center w-fit">
+                          <XCircleIcon className="w-3 h-3 mr-1" />
+                          Inactif
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEdit(user)}
+                          className="p-1 hover:bg-gray-100 rounded-lg"
+                          title="Modifier"
+                        >
+                          <PencilIcon className="w-5 h-5 text-gray-500" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenSettings(user)}
+                          className="p-1 hover:bg-gray-100 rounded-lg text-primary-600"
+                          title="Paramètres de l'utilisateur"
+                        >
+                          <Cog6ToothIcon className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleStatus(user._id, user.isActive)}
+                          className={`p-1 hover:bg-gray-100 rounded-lg ${user.isActive ? 'text-yellow-600' : 'text-green-600'
+                            }`}
+                          title={user.isActive ? 'Désactiver' : 'Activer'}
+                        >
+                          {user.isActive ? (
+                            <XCircleIcon className="w-5 h-5" />
+                          ) : (
+                            <CheckCircleIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                        {user.role !== 'admin' && (
+                          <button
+                            onClick={() => handleDelete(user._id)}
+                            className="p-1 hover:bg-gray-100 rounded-lg text-red-600"
+                            title="Supprimer"
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -320,9 +321,9 @@ const Users = () => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in-up" style={{ animationDelay: '0s' }}>
           <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl max-w-md w-full p-8 border border-white/20 dark:border-white/10">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              {editingUser ? 'Modifier l\'utilisateur' : 'Nouveau superviseur'}
+              {editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}
             </h2>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -367,22 +368,21 @@ const Users = () => {
                 />
               </div>
 
-              {!editingUser && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Mot de passe *
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    required
-                    minLength={6}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mot de passe {editingUser ? '(Laissez vide pour ne pas changer)' : '*'}
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required={!editingUser}
+                  minLength={6}
+                  placeholder={editingUser ? '••••••••' : ''}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors"
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -407,6 +407,7 @@ const Users = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors"
                 >
+                  <option value="intern">Stagiaire</option>
                   <option value="supervisor">Superviseur</option>
                   <option value="admin">Administrateur</option>
                 </select>
@@ -442,7 +443,7 @@ const Users = () => {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               Paramètres : {selectedUser.firstName} {selectedUser.lastName}
             </h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Langue</label>

@@ -8,29 +8,48 @@ const Task = require('../models/Task');
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
+    const { page = 1, limit = 12, search = '', status = '', priority = '', assignedTo = '' } = req.query;
     let query = {};
-    
-    // If user is intern, show only their tasks
+
+    // Role-based restrictions
     if (req.user.role === 'intern') {
       query.assignedTo = req.user.id;
+    } else if (req.user.role === 'supervisor') {
+      // Les superviseurs peuvent voir les tâches qu'ils ont créées OU assignées à leurs stagiaires (on peut simplifier selon besoin)
+      // Ici on va permettre de voir tout, ou filtrer par assignedTo='me' si besoin.
     }
-    
+
+    if (status) query.status = status;
+    if (priority) query.priority = priority;
+    if (assignedTo === 'me') query.assignedTo = req.user.id;
+
+    if (search) {
+      query.$or = [
+        { title: new RegExp(search, 'i') },
+        { description: new RegExp(search, 'i') }
+      ];
+    }
+
+    const total = await Task.countDocuments(query);
     const tasks = await Task.find(query)
       .populate('assignedTo', 'firstName lastName email')
       .populate('assignedBy', 'firstName lastName email')
-      .sort({ dueDate: 1 });
+      .sort({ dueDate: 1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
 
     res.json({
       success: true,
       count: tasks.length,
+      total,
+      pages: Math.ceil(total / limit),
+      page: parseInt(page),
       tasks
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la récupération des tâches'
-    });
+    res.status(500).json({ success: false, message: 'Erreur lors de la récupération' });
   }
 });
 
@@ -97,7 +116,7 @@ router.put('/:id', auth, async (req, res) => {
     const task = await Task.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!task) {
@@ -127,12 +146,12 @@ router.put('/:id', auth, async (req, res) => {
 router.patch('/:id/status', auth, async (req, res) => {
   try {
     const { status, progress } = req.body;
-    
+
     const updateData = { status };
     if (progress !== undefined) {
       updateData.progress = progress;
     }
-    
+
     if (status === 'completed') {
       updateData.completedAt = Date.now();
       updateData.progress = 100;
@@ -141,7 +160,7 @@ router.patch('/:id/status', auth, async (req, res) => {
     const task = await Task.findByIdAndUpdate(
       req.params.id,
       updateData,
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     res.json({
@@ -164,14 +183,14 @@ router.patch('/:id/status', auth, async (req, res) => {
 router.post('/:id/comments', auth, async (req, res) => {
   try {
     const { text } = req.body;
-    
+
     const task = await Task.findById(req.params.id);
-    
+
     task.comments.push({
       user: req.user.id,
       text
     });
-    
+
     await task.save();
 
     res.json({
