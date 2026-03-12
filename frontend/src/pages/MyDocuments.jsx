@@ -94,7 +94,7 @@ const MyDocuments = () => {
     }
   };
 
-  const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+  const API_BASE_URL = (api.defaults.baseURL || '').replace('/api', '');
 
   const filteredDocuments = internProfile?.documents?.filter(doc =>
     doc.name.toLowerCase().includes(searchTerm.toLowerCase())

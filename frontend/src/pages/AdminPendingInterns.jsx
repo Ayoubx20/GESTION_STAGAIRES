@@ -1,6 +1,5 @@
-// frontend/src/pages/AdminPendingInterns.jsx
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const AdminPendingInterns = () => {
   const [pendingInterns, setPendingInterns] = useState([]);
@@ -13,11 +12,8 @@ const AdminPendingInterns = () => {
 
   const fetchPendingInterns = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/admin/pending-interns', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setPendingInterns(response.data.interns);
+      const response = await api.get('/admin/pending-interns');
+      setPendingInterns(response.interns);
     } catch (error) {
       console.error('Erreur:', error);
       setMessage('Erreur lors du chargement');
@@ -28,10 +24,7 @@ const AdminPendingInterns = () => {
 
   const handleApprove = async (id) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:5000/api/admin/approve-intern/${id}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/admin/approve-intern/${id}`);
       setMessage('Stagiaire approuvé avec succès');
       fetchPendingInterns(); // Rafraîchir la liste
     } catch (error) {
@@ -43,10 +36,7 @@ const AdminPendingInterns = () => {
   const handleReject = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir rejeter ce stagiaire ?')) {
       try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:5000/api/admin/reject-intern/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.delete(`/admin/reject-intern/${id}`);
         setMessage('Stagiaire rejeté');
         fetchPendingInterns(); // Rafraîchir la liste
       } catch (error) {

@@ -55,9 +55,9 @@ const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5000',
     'https://frontend-five-drab-18.vercel.app',
-    'https://gestion-stagiaire-backend.onrender.com', // Votre URL Render fixe
+    'https://gestion-stagiaire-backend.onrender.com',
     process.env.FRONTEND_URL,
-    process.env.RENDER_EXTERNAL_URL // URL dynamique fournie par Render
+    process.env.RENDER_EXTERNAL_URL
 ].filter(Boolean);
 
 const corsOptions = {
@@ -65,7 +65,12 @@ const corsOptions = {
         // Autoriser Postman ou les outils locaux (!origin)
         if (!origin || !isProd) return callback(null, true);
         
-        if (allowedOrigins.some(ao => origin.startsWith(ao)) || allowedOrigins.includes(origin)) {
+        // Autoriser si l'origine est dans la liste ou finit par .vercel.app
+        const isAllowed = allowedOrigins.some(ao => origin.startsWith(ao)) || 
+                         allowedOrigins.includes(origin) ||
+                         origin.endsWith('.vercel.app');
+
+        if (isAllowed) {
             callback(null, true);
         } else {
             console.log('⚠️ Origine bloquée par CORS:', origin);

@@ -265,7 +265,7 @@ const PendingApprovals = () => {
                           </div>
                         </div>
                         <a
-                          href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${intern.application.cvUrl}`}
+                          href={`${(api.defaults.baseURL || '').replace('/api', '')}${intern.application.cvUrl}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
