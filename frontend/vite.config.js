@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'  // ✅ AJOUTEZ CETTE LIGNE !!!
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
-  root: path.resolve(__dirname, '.'),
+  root: '.',
   server: {
     port: 5173,
     open: true
@@ -14,7 +17,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html')  // ✅ path est maintenant défini
+        main: path.resolve(__dirname, 'index.html')
       }
     }
   }
