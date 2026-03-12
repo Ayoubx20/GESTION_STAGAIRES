@@ -51,7 +51,11 @@ const Tasks = () => {
   });
 
   useEffect(() => {
-    fetchTasks();
+    const delayDebounceFn = setTimeout(() => {
+      fetchTasks();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [pagination.page, filters, searchTerm]);
 
   const fetchTasks = async () => {

@@ -28,6 +28,7 @@ import Users from './pages/Users.jsx';
 import PendingApprovals from './pages/PendingApprovals.jsx';
 import Evaluations from './pages/Evaluations.jsx';
 import MyDocuments from './pages/MyDocuments.jsx';
+import GlobalSearch from './pages/GlobalSearch.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 // Protected Route
@@ -162,6 +163,9 @@ function App() {
                     <MyDocuments />
                   </ProtectedRoute>
                 } />
+
+                {/* ===== RECHERCHE GLOBALE ===== */}
+                <Route path="search" element={<GlobalSearch />} />
               </Route>
 
               {/* ========== ROUTE 404 ========== */}

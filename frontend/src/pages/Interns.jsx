@@ -61,11 +61,16 @@ const Interns = () => {
     }
   }, [isIntern, navigate]);
 
+  // Live search with debounce
   useEffect(() => {
-    if (!isIntern) {
-      fetchInterns();
-    }
-  }, [pagination.page, filters, isIntern]);
+    const delayDebounceFn = setTimeout(() => {
+      if (!isIntern) {
+        fetchInterns();
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, filters, pagination.page, isIntern]);
 
   const fetchInterns = async () => {
     try {
@@ -310,29 +315,35 @@ const Interns = () => {
       {/* Search and Filters - visible pour admin et superviseur */}
       {(isAdmin || isSupervisor) && (
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-white/50 dark:border-white/10 p-4 opacity-0 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <div className="flex gap-4 w-full">
+            <div className="flex-1 relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+              </div>
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Rechercher un stagiaire..."
-                className="input-field pl-10"
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
+                placeholder="Rechercher par nom, email, institution..."
+                className="w-full pl-10 pr-4 py-3 bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 dark:text-white transition-all shadow-sm"
               />
             </div>
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className={`btn-secondary ${showFilters ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-300' : ''}`}
+              className={`flex items-center px-4 py-2 rounded-xl text-sm font-semibold transition-all border ${
+                showFilters 
+                  ? 'bg-primary-50 dark:bg-primary-900/40 text-primary-600 border-primary-200' 
+                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-primary-300'
+              }`}
             >
               <FunnelIcon className="w-5 h-5 mr-2" />
               Filtres
             </button>
-            <button type="submit" className="btn-primary">
-              Rechercher
-            </button>
-          </form>
+          </div>
 
           {/* Filters Panel */}
           {showFilters && (

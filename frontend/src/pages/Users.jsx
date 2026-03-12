@@ -19,6 +19,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import EmptyState from '../components/EmptyState';
 import toast from 'react-hot-toast';
+import PremiumToggle from '../components/PremiumToggle';
 
 const Users = () => {
   const { isAdmin } = useAuth();
@@ -38,6 +39,7 @@ const Users = () => {
     role: 'supervisor',
     phone: ''
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -145,6 +147,15 @@ const Users = () => {
     }
   };
 
+  const filteredUsers = users.filter(user => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      user.firstName?.toLowerCase().includes(searchLower) ||
+      user.lastName?.toLowerCase().includes(searchLower) ||
+      user.email?.toLowerCase().includes(searchLower)
+    );
+  });
+
 
   const getRoleBadge = (role) => {
     const roleConfig = {
@@ -206,6 +217,22 @@ const Users = () => {
         </button>
       </div>
 
+      {/* Search Bar */}
+      <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm p-4 rounded-3xl border border-white/50 dark:border-white/10 opacity-0 animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <UserCircleIcon className="h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+          </div>
+          <input
+            type="text"
+            placeholder="Rechercher par nom, prénom ou email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white/80 dark:bg-gray-800/80 border border-transparent rounded-2xl focus:ring-2 focus:ring-primary-500/50 dark:text-white transition-all shadow-sm font-medium"
+          />
+        </div>
+      </div>
+
       {/* Users Table */}
       {users.length === 0 ? (
         <EmptyState
@@ -230,7 +257,7 @@ const Users = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
@@ -460,21 +487,21 @@ const Users = () => {
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700 dark:text-gray-300">Notifications Email</span>
-                <input
-                  type="checkbox"
+                <PremiumToggle
                   checked={userSettings.emailNotifications}
-                  onChange={(e) => setUserSettings({ ...userSettings, emailNotifications: e.target.checked })}
-                  className="w-5 h-5 rounded text-primary-600"
+                  onChange={(checked) => setUserSettings({ ...userSettings, emailNotifications: checked })}
+                  labelLeft="Off"
+                  labelRight="On"
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mt-4">
                 <span className="text-sm text-gray-700 dark:text-gray-300">Rappels de tâches</span>
-                <input
-                  type="checkbox"
+                <PremiumToggle
                   checked={userSettings.taskReminders}
-                  onChange={(e) => setUserSettings({ ...userSettings, taskReminders: e.target.checked })}
-                  className="w-5 h-5 rounded text-primary-600"
+                  onChange={(checked) => setUserSettings({ ...userSettings, taskReminders: checked })}
+                  labelLeft="Off"
+                  labelRight="On"
                 />
               </div>
             </div>

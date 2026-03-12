@@ -56,6 +56,28 @@ router.post('/', auth, async (req, res) => {
       message: 'Utilisateur créé avec succès',
       user: { id: user._id, email, firstName, lastName, role }
     });
+
+    // Profil stagiaire automatique si le rôle est stagiaire
+    if (role === 'intern') {
+      try {
+        const Intern = require('../models/Intern');
+        const existingProfile = await Intern.findOne({ user: user._id });
+        if (!existingProfile) {
+          await Intern.create({
+            user: user._id,
+            studentId: `STG-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`,
+            school: 'Non défini',
+            major: 'Non défini',
+            startDate: new Date(),
+            endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
+            status: 'active'
+          });
+          console.log(`✅ Profil stagiaire créé pour ${user.email}`);
+        }
+      } catch (err) {
+        console.error('Erreur creation profil stagiaire auto:', err);
+      }
+    }
   } catch (error) {
     console.error('Erreur creation utilisateur:', error);
     res.status(500).json({
@@ -111,6 +133,29 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     await user.save();
+
+    // Profil stagiaire automatique si le rôle devient stagiaire
+    if (user.role === 'intern') {
+      try {
+        const Intern = require('../models/Intern');
+        const existingProfile = await Intern.findOne({ user: user._id });
+        if (!existingProfile) {
+          await Intern.create({
+            user: user._id,
+            studentId: `STG-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`,
+            school: 'Non défini',
+            major: 'Non défini',
+            startDate: new Date(),
+            endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
+            status: 'active'
+          });
+          console.log(`✅ Profil stagiaire crée (update) pour ${user.email}`);
+        }
+      } catch (err) {
+        console.error('Erreur creation profil stagiaire auto (update):', err);
+      }
+    }
+
     res.json({ success: true, user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });

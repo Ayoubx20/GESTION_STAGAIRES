@@ -107,13 +107,20 @@ router.put('/approve-intern/:id', auth, isAdmin, async (req, res) => {
       });
     }
 
+    // Mettre à jour le statut de la candidature s'il existe
+    const Application = require('../models/Application');
+    await Application.findOneAndUpdate(
+      { user: intern._id },
+      { status: 'approved' }
+    );
+
     // Mettre à jour les statistiques
     const SiteStat = require('../models/SiteStat');
     const monthId = new Date().toISOString().slice(0, 7);
     await SiteStat.findOneAndUpdate(
       { monthId },
       { $inc: { approvedCount: 1 } },
-      { upsert: true, returnDocument: 'after' }
+      { upsert: true, new: true }
     );
 
     res.json({
@@ -155,14 +162,17 @@ router.put('/reject-intern/:id', auth, isAdmin, async (req, res) => {
     await Application.findOneAndUpdate(
       { user: intern._id },
       {
-        status: 'rejected',
-        reviewedAt: new Date(),
-        reviewedBy: req.user.id,
-        // Si l'application n'existe pas (ancien utilisateur), on en crée une basique
-        cvUrl: '/uploads/not-provided',
-        cvName: 'Non fourni'
+        $set: {
+          status: 'rejected',
+          reviewedAt: new Date(),
+          reviewedBy: req.user.id
+        },
+        $setOnInsert: {
+          cvUrl: '/uploads/not-provided',
+          cvName: 'Non fourni'
+        }
       },
-      { upsert: true, returnDocument: 'after' }
+      { upsert: true, new: true }
     );
 
     // L'utilisateur reste isApproved: false et isActive: false
@@ -200,7 +210,8 @@ router.put('/restore-intern/:id', auth, isAdmin, async (req, res) => {
     const Application = require('../models/Application');
     await Application.findOneAndUpdate(
       { user: intern._id },
-      { status: 'pending' }
+      { status: 'pending' },
+      { upsert: true }
     );
 
     res.json({

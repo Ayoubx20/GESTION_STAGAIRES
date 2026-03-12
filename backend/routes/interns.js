@@ -10,6 +10,36 @@ const upload = require('../middleware/upload');
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
+    // 🔥 AUTO-REPAIR: Ensure all approved users with role 'intern' have a profile
+    // This solves the issue where some interns appear in Users but not in Interns list
+    try {
+      const allInternProfiles = await Intern.find().select('user').lean();
+      const profileUserIds = allInternProfiles.map(p => p.user.toString());
+      
+      const orphanedUsers = await User.find({
+        role: 'intern',
+        isApproved: true,
+        _id: { $nin: profileUserIds }
+      }).lean();
+
+      if (orphanedUsers.length > 0) {
+        console.log(`🛠️ Reparation : ${orphanedUsers.length} profils stagiaires manquants trouvés.`);
+        for (const user of orphanedUsers) {
+          await Intern.create({
+            user: user._id,
+            studentId: `STG-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`,
+            school: 'Non défini',
+            major: 'Non défini',
+            startDate: user.createdAt || new Date(),
+            endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)),
+            status: 'active'
+          });
+        }
+      }
+    } catch (repairErr) {
+      console.error('⚠️ Auto-repair failed:', repairErr);
+    }
+
     const { page = 1, limit = 10, search = '', status = '', department = '', school = '' } = req.query;
     const query = {};
 
