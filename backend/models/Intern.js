@@ -31,10 +31,6 @@ const internSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  department: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Department'
-  },
   status: {
     type: String,
     enum: ['pending', 'active', 'completed', 'terminated'],

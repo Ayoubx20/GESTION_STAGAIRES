@@ -40,7 +40,7 @@ router.get('/', auth, async (req, res) => {
       console.error('⚠️ Auto-repair failed:', repairErr);
     }
 
-    const { page = 1, limit = 10, search = '', status = '', department = '', school = '' } = req.query;
+    const { page = 1, limit = 10, search = '', status = '', school = '' } = req.query;
     const query = {};
 
     // Filter by status
@@ -49,8 +49,6 @@ router.get('/', auth, async (req, res) => {
     // Filter by school
     if (school) query.school = new RegExp(school, 'i');
 
-    // Filter by department
-    if (department) query.department = department;
 
     // Search by name/email (requires joining with User)
     let userIds = [];
@@ -75,7 +73,6 @@ router.get('/', auth, async (req, res) => {
     const interns = await Intern.find(query)
       .populate('user', 'firstName lastName email phone')
       .populate('supervisor', 'firstName lastName email')
-      .populate('department', 'name')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -102,8 +99,7 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const intern = await Intern.findById(req.params.id)
       .populate('user', 'firstName lastName email phone')
-      .populate('supervisor', 'firstName lastName email')
-      .populate('department', 'name');
+      .populate('supervisor', 'firstName lastName email');
 
     if (!intern) {
       return res.status(404).json({
@@ -139,9 +135,7 @@ router.post('/', auth, async (req, res) => {
       school,
       major,
       startDate,
-      endDate,
-      supervisor,
-      department
+      endDate
     } = req.body;
 
     // 1. Check if user already exists
@@ -183,7 +177,6 @@ router.post('/', auth, async (req, res) => {
       startDate,
       endDate,
       supervisor: supervisor || req.user.id,
-      department,
       status: 'active'
     });
 
@@ -300,8 +293,7 @@ router.get('/me/profile', auth, async (req, res) => {
   try {
     const intern = await Intern.findOne({ user: req.user.id })
       .populate('user', 'firstName lastName email phone')
-      .populate('supervisor', 'firstName lastName email')
-      .populate('department', 'name');
+      .populate('supervisor', 'firstName lastName email');
 
     if (!intern) {
       return res.status(404).json({

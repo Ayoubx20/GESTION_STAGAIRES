@@ -138,7 +138,6 @@ try {
     app.use('/api/auth', require('./routes/auth'));
     app.use('/api/interns', require('./routes/interns'));
     app.use('/api/tasks', require('./routes/tasks'));
-    app.use('/api/departments', require('./routes/departments'));
     app.use('/api/users', require('./routes/users'));
     app.use('/api/admin', require('./routes/admin'));
     app.use('/api/stats', require('./routes/stats'));
