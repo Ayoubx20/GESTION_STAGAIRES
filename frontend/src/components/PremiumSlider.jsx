@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-
+// ana hna
 const PremiumSlider = ({ value = 48, onChange, min = 0, max = 100 }) => {
   const [internalValue, setInternalValue] = useState(value);
   const [isDragging, setIsDragging] = useState(false);
@@ -13,7 +13,7 @@ const PremiumSlider = ({ value = 48, onChange, min = 0, max = 100 }) => {
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
     const percentage = (x / rect.width);
     const newValue = Math.round(min + percentage * (max - min));
-    
+
     setInternalValue(newValue);
     if (onChange) onChange(newValue);
   };
@@ -22,7 +22,7 @@ const PremiumSlider = ({ value = 48, onChange, min = 0, max = 100 }) => {
     const onMouseMove = (e) => isDragging && handleMove(e.clientX);
     const onMouseUp = () => setIsDragging(false);
     const onTouchMove = (e) => isDragging && handleMove(e.touches[0].clientX);
-    
+
     if (isDragging) {
       window.addEventListener('mousemove', onMouseMove);
       window.addEventListener('mouseup', onMouseUp);
@@ -44,9 +44,9 @@ const PremiumSlider = ({ value = 48, onChange, min = 0, max = 100 }) => {
       <div className="text-sm font-semibold text-gray-400 mb-6 tracking-widest uppercase">Premium Liquid Slider Demo</div>
       {/* Outer plaque to give a solid base for Neumorphism regardless of site theme */}
       <div className="w-full bg-[#f0f3f8] dark:bg-[#1a1b1f] p-8 rounded-[3rem] shadow-[15px_15px_30px_rgba(180,186,196,0.5),-15px_-15px_30px_rgba(255,255,255,0.8)] dark:shadow-[15px_15px_30px_rgba(0,0,0,0.6),-15px_-15px_30px_rgba(255,255,255,0.03)] border-2 border-white/50 dark:border-white/5 relative z-10 transition-colors duration-500 hover:scale-[1.01]">
-        
+
         {/* Realistic Inner Track cut-out */}
-        <div 
+        <div
           ref={sliderRef}
           onMouseDown={(e) => { setIsDragging(true); handleMove(e.clientX); }}
           onTouchStart={(e) => { setIsDragging(true); handleMove(e.touches[0].clientX); }}
@@ -58,7 +58,7 @@ const PremiumSlider = ({ value = 48, onChange, min = 0, max = 100 }) => {
           </div>
 
           {/* Liquid thumb/bar stretching */}
-          <div 
+          <div
             className="absolute left-0 h-full flex items-center justify-end pointer-events-none transition-all duration-75 ease-out"
             style={{ width: `${percentage}%` }}
           >
@@ -67,15 +67,15 @@ const PremiumSlider = ({ value = 48, onChange, min = 0, max = 100 }) => {
 
             {/* Bulbous thumb head on the right */}
             <div className="relative w-20 h-20 -mr-6 rounded-full bg-gradient-to-br from-[#ffd9b3] via-[#fb8c66] to-[#d85040] shadow-[10px_0px_20px_rgba(216,80,64,0.4),-5px_0px_10px_rgba(255,255,255,0.6),inset_2px_4px_8px_rgba(255,255,255,0.8),inset_-2px_-5px_10px_rgba(0,0,0,0.2)] dark:shadow-[10px_0px_20px_rgba(216,80,64,0.2),-5px_0px_10px_rgba(0,0,0,0.4),inset_2px_4px_8px_rgba(255,255,255,0.3),inset_-2px_-5px_10px_rgba(0,0,0,0.4)] flex items-center justify-center z-20 overflow-hidden transform transition-transform duration-200">
-               
-               {/* Extremely glossy upper reflection */}
-               <div className="absolute top-1 left-2 w-12 h-6 bg-gradient-to-b from-white/90 to-transparent rounded-[100%] transform -rotate-12 blur-[0.5px]"></div>
-               
-               {/* Secondary edge gloss */}
-               <div className="absolute bottom-1 right-2 w-8 h-4 bg-gradient-to-t from-white/40 to-transparent rounded-[100%] transform rotate-[30deg]"></div>
-               
-               {/* Core color depth */}
-               <div className="absolute inset-2 rounded-full border border-white/20 shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]"></div>
+
+              {/* Extremely glossy upper reflection */}
+              <div className="absolute top-1 left-2 w-12 h-6 bg-gradient-to-b from-white/90 to-transparent rounded-[100%] transform -rotate-12 blur-[0.5px]"></div>
+
+              {/* Secondary edge gloss */}
+              <div className="absolute bottom-1 right-2 w-8 h-4 bg-gradient-to-t from-white/40 to-transparent rounded-[100%] transform rotate-[30deg]"></div>
+
+              {/* Core color depth */}
+              <div className="absolute inset-2 rounded-full border border-white/20 shadow-[inset_0_0_15px_rgba(0,0,0,0.1)]"></div>
             </div>
           </div>
         </div>
