@@ -1,25 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
+import path from 'path'  // ✅ AJOUTEZ CETTE LIGNE !!!
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Définir le dossier racine explicitement
   root: path.resolve(__dirname, '.'),
   server: {
     port: 5173,
     open: true
   },
   build: {
-    // Dossier de sortie
     outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html')
+        main: path.resolve(__dirname, 'index.html')  // ✅ path est maintenant défini
       }
     }
   }
 })
-// aloooooo 
