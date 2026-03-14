@@ -74,10 +74,7 @@ router.get('/', auth, async (req, res) => {
     const userIds = validUsers.map(u => u._id);
     query.user = { $in: userIds };
 
-    // Role-based filtering: Supervisors only see their own interns
-    if (req.user.role === 'supervisor') {
-      query.supervisor = req.user.id;
-    }
+    // Role-based filtering removed : Supervisors can view all stagiaires, enabling them to construct their teams and see the entire directory.
 
     const total = await Intern.countDocuments(query);
     const interns = await Intern.find(query)
