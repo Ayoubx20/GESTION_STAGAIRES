@@ -42,6 +42,12 @@ export const taskService = {
     return response.comments || response;
   },
 
+  // Validate task (Supervisor/Admin)
+  validate: async (id, decision, feedback = '') => {
+    const response = await api.patch(`/tasks/${id}/validate`, { decision, feedback });
+    return response.task || response;
+  },
+
   // Get task statistics
   getStats: async () => {
     const response = await api.get('/tasks/stats');

@@ -99,6 +99,20 @@ const Tasks = () => {
     }
   };
 
+  const handleValidation = async (id, decision) => {
+    // decision = 'approve' or 'reject'
+    const feedback = decision === 'reject' ? prompt("Raison du rejet (sera ajoutée aux commentaires) :") : "";
+    if (decision === 'reject' && feedback === null) return; // cancelled
+
+    try {
+      await taskService.validate(id, decision, feedback);
+      toast.success(decision === 'approve' ? 'Tâche approuvée ✓' : 'Tâche renvoyée pour correction');
+      fetchTasks();
+    } catch (error) {
+      toast.error('Erreur lors de la validation');
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!isAdmin && !isSupervisor) {
       toast.error('Privilèges insuffisants pour supprimer');
@@ -154,6 +168,7 @@ const Tasks = () => {
     const labels = {
       pending: 'En attente',
       in_progress: 'En cours',
+      pending_validation: 'En validation',
       completed: 'Terminée',
       overdue: 'En retard',
       cancelled: 'Annulée'
@@ -213,6 +228,7 @@ const Tasks = () => {
           <option value="">Tous les Status</option>
           <option value="pending">En attente</option>
           <option value="in_progress">En cours</option>
+          <option value="pending_validation">À valider</option>
           <option value="completed">Terminées</option>
           <option value="overdue">En retard</option>
         </select>
@@ -377,17 +393,41 @@ const Tasks = () => {
 
                   {/* Quick Action Buttons - New Functionality */}
                   <div className="grid grid-cols-2 gap-2">
-                    {task.status !== 'completed' && (
-                      <button 
-                        onClick={() => handleStatusChange(task._id, task.status === 'pending' ? 'in_progress' : 'completed')}
-                        className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                          task.status === 'pending' 
-                            ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20 hover:bg-primary-600' 
-                            : 'bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600'
-                        }`}
-                      >
-                        {task.status === 'pending' ? 'Démarrer' : 'Terminer'}
-                      </button>
+                    {task.status === 'pending_validation' ? (
+                        (isAdmin || isSupervisor) ? (
+                            <>
+                                <button
+                                    onClick={() => handleValidation(task._id, 'approve')}
+                                    className="py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600"
+                                >
+                                    Approuver
+                                </button>
+                                <button
+                                    onClick={() => handleValidation(task._id, 'reject')}
+                                    className="py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-rose-500 text-white shadow-lg shadow-rose-500/20 hover:bg-rose-600"
+                                >
+                                    Rejeter
+                                </button>
+                            </>
+                        ) : (
+                            <div className="col-span-2 flex items-center justify-center py-2.5 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-500/20">
+                                <ClockIcon className="w-4 h-4 text-yellow-500 mr-2" />
+                                <span className="text-[10px] font-black text-yellow-600 dark:text-yellow-400 uppercase tracking-[0.2em]">En validation par superviseur</span>
+                            </div>
+                        )
+                    ) : (
+                      task.status !== 'completed' && (
+                        <button 
+                          onClick={() => handleStatusChange(task._id, task.status === 'pending' ? 'in_progress' : 'completed')}
+                          className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                            task.status === 'pending' 
+                              ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20 hover:bg-primary-600' 
+                              : 'bg-green-500 text-white shadow-lg shadow-green-500/20 hover:bg-green-600'
+                          }`}
+                        >
+                          {task.status === 'pending' ? 'Démarrer' : 'Terminer'}
+                        </button>
+                      )
                     )}
                     {task.status === 'completed' ? (
                       <div className="col-span-2 flex items-center justify-center py-2.5 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-500/20">
@@ -395,12 +435,14 @@ const Tasks = () => {
                         <span className="text-[10px] font-black text-green-600 dark:text-green-400 uppercase tracking-[0.2em]">Mission Accomplie</span>
                       </div>
                     ) : (
-                      <Link 
-                        to={`/tasks/${task._id}`}
-                        className="py-2.5 bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 rounded-xl text-[10px] font-black uppercase tracking-widest text-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-all border border-transparent hover:border-gray-300"
-                      >
-                        Détails
-                      </Link>
+                      task.status !== 'pending_validation' && (
+                        <Link 
+                          to={`/tasks/${task._id}`}
+                          className="py-2.5 bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 rounded-xl text-[10px] font-black uppercase tracking-widest text-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-all border border-transparent hover:border-gray-300"
+                        >
+                          Détails
+                        </Link>
+                      )
                     )}
                   </div>
                 </div>
