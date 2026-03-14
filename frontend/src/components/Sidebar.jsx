@@ -32,6 +32,7 @@ const Sidebar = () => {
   const adminSupervisorNavigation = [
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
     { name: t('interns'), to: '/interns', icon: UsersIcon },
+    { name: 'Équipes', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Rapports', to: '/reports', icon: ChartBarIcon },
   ];

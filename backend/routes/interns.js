@@ -58,7 +58,7 @@ router.get('/', auth, async (req, res) => {
     if (school) query.school = new RegExp(school, 'i');
 
 
-    // Baseline: only return interns whose underlying User role is 'intern'
+    // Baseline: only return interns whose underlying User role is 'intern' (including explicitly inactive ones)
     let userFilter = { role: 'intern' };
 
     // Search by name/email
@@ -222,6 +222,12 @@ router.put('/:id', auth, async (req, res) => {
       });
     }
 
+    // Synchronize User isActive status based on intern's status.
+    if (req.body.status) {
+      const isActive = req.body.status !== 'terminated';
+      await User.findByIdAndUpdate(intern.user, { isActive });
+    }
+
     res.json({
       success: true,
       message: 'Stagiaire mis à jour avec succès',
@@ -281,6 +287,10 @@ router.patch('/:id/status', auth, async (req, res) => {
       { status },
       { returnDocument: 'after' }
     );
+
+    // Synchronize User isActive status based on new intern status
+    const isActive = status !== 'terminated';
+    await User.findByIdAndUpdate(intern.user, { isActive });
 
     res.json({
       success: true,

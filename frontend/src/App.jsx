@@ -21,6 +21,8 @@ import InternForm from './pages/InternForm.jsx';
 import Tasks from './pages/Tasks.jsx';
 import TaskDetail from './pages/TaskDetail.jsx';
 import TaskForm from './pages/TaskForm.jsx';
+import Teams from './pages/Teams.jsx';
+import TeamForm from './pages/TeamForm.jsx';
 import Profile from './pages/Profile.jsx';
 import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
@@ -107,6 +109,23 @@ function App() {
                 <Route path="interns/:id/edit" element={
                   <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
                     <InternForm />
+                  </ProtectedRoute>
+                } />
+
+                {/* ===== GESTION DES EQUIPES ===== */}
+                <Route path="teams" element={
+                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                    <Teams />
+                  </ProtectedRoute>
+                } />
+                <Route path="teams/new" element={
+                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                    <TeamForm />
+                  </ProtectedRoute>
+                } />
+                <Route path="teams/:id/edit" element={
+                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                    <TeamForm />
                   </ProtectedRoute>
                 } />
 

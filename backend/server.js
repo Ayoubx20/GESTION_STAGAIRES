@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 
 // ============================================
 // 1. CONFIGURATION DES VARIABLES D'ENVIRONNEMENT
@@ -46,6 +47,7 @@ app.use(compression());
 // Parser le JSON et les données URL-encodées
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // ============================================
 // 5. CONFIGURATION CORS DYNAMIQUE
@@ -95,7 +97,7 @@ const connectDB = async () => {
         
         // Mongoose 6+ n'a plus besoin de useNewUrlParser ou useUnifiedTopology
         const conn = await mongoose.connect(process.env.MONGODB_URI, {
-            serverSelectionTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 15000,
             socketTimeoutMS: 45000,
         });
 
@@ -149,6 +151,7 @@ try {
     app.use('/api/notifications', require('./routes/notifications'));
     app.use('/api/evaluations', require('./routes/evaluations'));
     app.use('/api/settings', require('./routes/settings'));
+    app.use('/api/teams', require('./routes/teams'));
     
     // Pour l'upload de CV/Documents
     app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

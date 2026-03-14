@@ -3,9 +3,16 @@ const User = require('../models/User');
 
 module.exports = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    let token;
     
-    if (!token) {
+    // Support dual modes: Cookie (preferred) or Bearer Token
+    if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    } else if (req.header('Authorization') && req.header('Authorization').startsWith('Bearer ')) {
+      token = req.header('Authorization').replace('Bearer ', '');
+    }
+    
+    if (!token || token === 'none' || token === 'undefined') {
       return res.status(401).json({ 
         success: false, 
         message: 'Accès non autorisé. Token manquant.' 

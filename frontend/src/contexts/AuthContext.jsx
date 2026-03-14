@@ -14,23 +14,12 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try {
-      const savedUser = localStorage.getItem('user');
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch (e) {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      loadUser();
-    } else {
-      setLoading(false);
-    }
+    // Rely on /auth/me being able to read the HttpOnly cookie (or fallback token) to automatically log in the user 
+    loadUser();
   }, []);
 
   const loadUser = async () => {
@@ -38,13 +27,11 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get('/auth/me');
       // On met à jour l'utilisateur avec les données fraîches du serveur
       setUser(response.user);
-      localStorage.setItem('user', JSON.stringify(response.user));
     } catch (error) {
       console.error('Error loading user:', error);
       // Supprimer le token UNIQUEMENT si l'erreur est 401 (Non autorisé)
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
-        localStorage.removeItem('user');
         setUser(null);
       }
     } finally {
@@ -58,7 +45,6 @@ export const AuthProvider = ({ children }) => {
       const { token, user } = response;
       
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
       
       setUser(user);
       
@@ -77,7 +63,6 @@ export const AuthProvider = ({ children }) => {
       const { token, user } = response;
       
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       
       toast.success('Inscription réussie !');
@@ -106,9 +91,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (err) {
+      console.warn("Logout endpoint error:", err);
+    }
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
     setUser(null);
     toast.success('Déconnexion réussie');
   };

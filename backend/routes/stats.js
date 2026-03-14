@@ -58,12 +58,26 @@ router.get('/reports', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Accès non autorisé' });
     }
 
+    // 0. Supervisor filtering setup
+    let userQuery = { role: 'intern', isActive: true };
+    let taskQuery = {};
+    let internProfileQuery = {};
+
+    if (req.user.role === 'supervisor') {
+      const myInterns = await Intern.find({ supervisor: req.user.id }).select('user');
+      const internUserIds = myInterns.map(i => i.user.toString());
+      userQuery._id = { $in: internUserIds };
+      taskQuery.assignedTo = { $in: internUserIds };
+      internProfileQuery.supervisor = req.user.id;
+    }
+
     // 1. General Stats
-    const totalInterns = await User.countDocuments({ role: 'intern', isActive: true });
-    const completedTasks = await Task.countDocuments({ status: 'completed' });
-    const inProgressTasks = await Task.countDocuments({ status: { $in: ['in_progress', 'pending'] } });
+    const totalInterns = await User.countDocuments(userQuery);
+    const completedTasks = await Task.countDocuments({ ...taskQuery, status: 'completed' });
+    const inProgressTasks = await Task.countDocuments({ ...taskQuery, status: { $in: ['in_progress', 'pending', 'pending_validation'] } });
     // 2. School Data (instead of Department)
     const schoolAgg = await Intern.aggregate([
+      { $match: internProfileQuery },
       { $group: { _id: '$school', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
@@ -79,8 +93,8 @@ router.get('/reports', auth, async (req, res) => {
       const startOfDay = new Date(d.setHours(0, 0, 0, 0));
       const endOfDay = new Date(d.setHours(23, 59, 59, 999));
 
-      const created = await Task.countDocuments({ createdAt: { $gte: startOfDay, $lte: endOfDay } });
-      const completed = await Task.countDocuments({ completedAt: { $gte: startOfDay, $lte: endOfDay } });
+      const created = await Task.countDocuments({ ...taskQuery, createdAt: { $gte: startOfDay, $lte: endOfDay } });
+      const completed = await Task.countDocuments({ ...taskQuery, completedAt: { $gte: startOfDay, $lte: endOfDay } });
 
       const dayName = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(startOfDay);
       taskData.push({
@@ -103,13 +117,13 @@ router.get('/reports', auth, async (req, res) => {
 
       // Cumulative total interns created up to that month
       const total = await User.countDocuments({
-        role: 'intern',
+        ...userQuery,
         createdAt: { $lte: endOfMonth }
       });
 
-      // Active interns means not inactive before the end of the month (simplification: total active up to that month)
+      // Active interns
       const actifs = await User.countDocuments({
-        role: 'intern',
+        ...userQuery,
         createdAt: { $lte: endOfMonth },
         isActive: true
       });

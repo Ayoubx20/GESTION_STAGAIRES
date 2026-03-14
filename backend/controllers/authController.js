@@ -71,9 +71,16 @@ exports.register = async (req, res) => {
       console.error('Erreur notification admin:', notifErr);
     }
 
+    const cookieOptions = {
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    };
+
     console.log('✅ Inscription réussie pour:', email);
 
-    res.status(201).json({
+    res.status(201).cookie('token', token, cookieOptions).json({
       success: true,
       token,
       user: {
@@ -167,9 +174,16 @@ exports.login = async (req, res) => {
       settings = await UserSettings.create({ user: user._id });
     }
 
+    const cookieOptions = {
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    };
+
     console.log('✅ Login réussi pour:', email);
 
-    res.json({
+    res.status(200).cookie('token', token, cookieOptions).json({
       success: true,
       token,
       user: {
@@ -244,6 +258,23 @@ exports.getMe = async (req, res) => {
       message: 'Erreur serveur' 
     });
   }
+};
+
+// @desc    Logout user & clear cookie
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = (req, res) => {
+  res.cookie('token', 'none', {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'Déconnexion réussie'
+  });
 };
 
 // @desc    Register with CV (candidature)

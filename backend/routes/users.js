@@ -202,6 +202,16 @@ router.patch('/:id/status', auth, async (req, res) => {
     }
     const { isActive } = req.body;
     const user = await User.findByIdAndUpdate(req.params.id, { isActive }, { returnDocument: 'after' }).select('-password');
+    
+    // Si c'est un stagiaire, on synchronise son statut de stage
+    if (user.role === 'intern') {
+      const Intern = require('../models/Intern');
+      await Intern.findOneAndUpdate(
+        { user: user._id },
+        { status: isActive ? 'active' : 'terminated' }
+      );
+    }
+    
     res.json({ success: true, user });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });

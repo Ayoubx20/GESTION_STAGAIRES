@@ -15,8 +15,14 @@ router.get('/', auth, async (req, res) => {
     if (req.user.role === 'intern') {
       query.assignedTo = req.user.id;
     } else if (req.user.role === 'supervisor') {
-      // Les superviseurs peuvent voir les tâches qu'ils ont créées OU assignées à leurs stagiaires (on peut simplifier selon besoin)
-      // Ici on va permettre de voir tout, ou filtrer par assignedTo='me' si besoin.
+      // Les superviseurs peuvent voir les tâches de leurs propres stagiaires
+      const Intern = require('../models/Intern');
+      const myInterns = await Intern.find({ supervisor: req.user.id }).select('user');
+      const internUserIds = myInterns.map(i => i.user.toString());
+      query.$or = [
+        { assignedTo: { $in: internUserIds } },
+        { assignedBy: req.user.id }
+      ];
     }
 
     if (status) query.status = status;
@@ -145,14 +151,19 @@ router.put('/:id', auth, async (req, res) => {
 // @access  Private
 router.patch('/:id/status', auth, async (req, res) => {
   try {
-    const { status, progress } = req.body;
+    let finalStatus = status;
 
-    const updateData = { status };
+    // Si un stagiaire marque une tâche comme terminée, elle passe en attente de validation
+    if (req.user.role === 'intern' && status === 'completed') {
+      finalStatus = 'pending_validation';
+    }
+
+    const updateData = { status: finalStatus };
     if (progress !== undefined) {
       updateData.progress = progress;
     }
 
-    if (status === 'completed') {
+    if (finalStatus === 'completed') {
       updateData.completedAt = Date.now();
       updateData.progress = 100;
     }
@@ -165,7 +176,9 @@ router.patch('/:id/status', auth, async (req, res) => {
 
     res.json({
       success: true,
-      message: `Statut mis à jour: ${status}`,
+      message: finalStatus === 'pending_validation' 
+        ? 'Tâche envoyée pour validation au superviseur'
+        : `Statut mis à jour: ${finalStatus}`,
       task
     });
   } catch (error) {
@@ -174,6 +187,49 @@ router.patch('/:id/status', auth, async (req, res) => {
       success: false,
       message: 'Erreur lors de la mise à jour du statut'
     });
+  }
+});
+
+// @desc    Validate task (Approve/Reject by Supervisor)
+// @route   PATCH /api/tasks/:id/validate
+// @access  Private (Supervisor/Admin)
+router.patch('/:id/validate', auth, async (req, res) => {
+  try {
+    if (req.user.role === 'intern') {
+      return res.status(403).json({ success: false, message: 'Non autorisé' });
+    }
+
+    const { decision, feedback } = req.body; // decision: 'approve' or 'reject'
+    
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Tâche non trouvée' });
+
+    if (decision === 'approve') {
+      task.status = 'completed';
+      task.progress = 100;
+      task.completedAt = Date.now();
+    } else {
+      task.status = 'in_progress';
+      task.progress = Math.min(task.progress, 90); // Rétrograder un peu le progrès
+    }
+
+    if (feedback) {
+      task.comments.push({
+        user: req.user.id,
+        text: `[Système] ${decision === 'approve' ? '✅ Approuvé' : '❌ Rejeté'} : ${feedback}`
+      });
+    }
+
+    await task.save();
+
+    res.json({
+      success: true,
+      message: decision === 'approve' ? 'Tâche approuvée' : 'Tâche renvoyée pour modification',
+      task
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Erreur lors de la validation' });
   }
 });
 
