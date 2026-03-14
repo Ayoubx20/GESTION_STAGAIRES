@@ -14,7 +14,6 @@ router.get('/', auth, async (req, res) => {
       query.supervisor = req.user.id;
     }
     
-    // Admins see all teams
     const teams = await Team.find(query)
       .populate('supervisor', 'firstName lastName email')
       .populate({
@@ -26,7 +25,28 @@ router.get('/', auth, async (req, res) => {
       })
       .sort({ createdAt: -1 });
       
-    res.json({ success: true, teams });
+    const Task = require('../models/Task');
+    
+    // Compute stats for each team
+    const teamsWithStats = await Promise.all(teams.map(async (teamDoc) => {
+      const team = teamDoc.toObject();
+      const userIds = team.interns
+        .filter(i => i && i.user)
+        .map(i => i.user._id);
+        
+      if (userIds.length > 0) {
+        team.totalTasks = await Task.countDocuments({ assignedTo: { $in: userIds } });
+        team.completedTasks = await Task.countDocuments({ assignedTo: { $in: userIds }, status: 'completed' });
+        team.pendingValidationTasks = await Task.countDocuments({ assignedTo: { $in: userIds }, status: 'pending_validation' });
+      } else {
+        team.totalTasks = 0;
+        team.completedTasks = 0;
+        team.pendingValidationTasks = 0;
+      }
+      return team;
+    }));
+      
+    res.json({ success: true, teams: teamsWithStats });
   } catch (error) {
     console.error('Error fetching teams:', error);
     res.status(500).json({ success: false, message: 'Erreur lors de la récupération des équipes' });
