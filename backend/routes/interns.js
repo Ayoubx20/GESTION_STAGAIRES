@@ -36,6 +36,14 @@ router.get('/', auth, async (req, res) => {
           });
         }
       }
+      // Delete Intern profiles where the underlying User is NOT 'intern'
+      const nonInternUsers = await User.find({ role: { $ne: 'intern' } }).select('_id').lean();
+      const nonInternUserIds = nonInternUsers.map(u => u._id);
+      
+      const orphanedProfiles = await Intern.deleteMany({ user: { $in: nonInternUserIds } });
+      if (orphanedProfiles.deletedCount > 0) {
+        console.log(`🧹 Nettoyage : ${orphanedProfiles.deletedCount} profils stagiaires obsolètes supprimés.`);
+      }
     } catch (repairErr) {
       console.error('⚠️ Auto-repair failed:', repairErr);
     }
@@ -50,19 +58,21 @@ router.get('/', auth, async (req, res) => {
     if (school) query.school = new RegExp(school, 'i');
 
 
-    // Search by name/email (requires joining with User)
-    let userIds = [];
+    // Baseline: only return interns whose underlying User role is 'intern'
+    let userFilter = { role: 'intern' };
+
+    // Search by name/email
     if (search) {
-      const users = await User.find({
-        $or: [
-          { firstName: new RegExp(search, 'i') },
-          { lastName: new RegExp(search, 'i') },
-          { email: new RegExp(search, 'i') }
-        ]
-      }).select('_id');
-      userIds = users.map(u => u._id);
-      query.user = { $in: userIds };
+      userFilter.$or = [
+        { firstName: new RegExp(search, 'i') },
+        { lastName: new RegExp(search, 'i') },
+        { email: new RegExp(search, 'i') }
+      ];
     }
+
+    const validUsers = await User.find(userFilter).select('_id');
+    const userIds = validUsers.map(u => u._id);
+    query.user = { $in: userIds };
 
     // Role-based filtering: Supervisors only see their own interns
     if (req.user.role === 'supervisor') {

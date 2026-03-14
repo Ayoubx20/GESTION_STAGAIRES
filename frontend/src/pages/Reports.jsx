@@ -29,7 +29,7 @@ const Reports = () => {
     stats: { totalInterns: 0, completedTasks: 0, inProgressTasks: 0, totalDepartments: 0 },
     internData: [],
     taskData: [],
-    departmentData: []
+    schoolData: []
   });
 
   const [dateRange, setDateRange] = useState({
@@ -49,7 +49,7 @@ const Reports = () => {
         stats: res.stats,
         internData: res.internData,
         taskData: res.taskData,
-        departmentData: res.departmentData
+        schoolData: res.schoolData || []
       });
     } catch (error) {
       toast.error('Erreur lors du chargement des rapports');
@@ -178,8 +178,8 @@ const Reports = () => {
               <BuildingOfficeIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <p className="stat-label mt-4">Départements</p>
-          <p className="stat-value">{data.stats.totalDepartments}</p>
+          <p className="stat-label mt-4">Écoles Représentées</p>
+          <p className="stat-value">{data.schoolData?.length || 0}</p>
         </div>
       </div>
 
@@ -220,12 +220,12 @@ const Reports = () => {
         </div>
 
         <div className="card lg:col-span-2">
-          <h3 className="card-title mb-4">Répartition par Département</h3>
+          <h3 className="card-title mb-4">Répartition par École</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data.departmentData}
+                  data={data.schoolData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -234,7 +234,7 @@ const Reports = () => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {data.departmentData.map((entry, index) => (
+                  {data.schoolData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

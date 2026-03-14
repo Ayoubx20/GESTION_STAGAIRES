@@ -154,6 +154,15 @@ router.put('/:id', auth, async (req, res) => {
       } catch (err) {
         console.error('Erreur creation profil stagiaire auto (update):', err);
       }
+    } else {
+      // Si le rôle n'est plus stagiaire, on supprime le profil stagiaire
+      try {
+        const Intern = require('../models/Intern');
+        await Intern.findOneAndDelete({ user: user._id });
+        console.log(`🧹 Profil stagiaire retiré pour ${user.email} (nouveau rôle: ${user.role})`);
+      } catch (err) {
+        console.error('Erreur suppression profil stagiaire:', err);
+      }
     }
 
     res.json({ success: true, user: { id: user._id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } });
