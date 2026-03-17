@@ -23,12 +23,8 @@ const Teams = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isIntern) {
-      navigate('/dashboard');
-      return;
-    }
     fetchTeams();
-  }, [isIntern, navigate]);
+  }, []);
 
   const fetchTeams = async () => {
     try {
@@ -91,20 +87,27 @@ const Teams = () => {
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-primary-500/30">
                     <UserGroupIcon className="w-7 h-7" />
                   </div>
-                  <div>
+                  <div className="flex flex-col">
                     <h3 className="text-2xl font-black text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{team.name}</h3>
                     <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{team.interns?.length || 0} membres actifs</p>
+                    {team.project && (
+                      <span className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold leading-4 bg-primary-100 text-primary-800 dark:bg-primary-900/60 dark:text-primary-300 w-max border border-primary-200 dark:border-primary-800">
+                        Travail / Projet : {team.project}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
-                <div className="flex space-x-2">
-                  <Link to={`/teams/${team._id}/edit`} className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    <PencilIcon className="w-5 h-5" />
-                  </Link>
-                  <button onClick={() => handleDelete(team._id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
-                </div>
+                {(isAdmin || isSupervisor) && (
+                  <div className="flex space-x-2">
+                    <Link to={`/teams/${team._id}/edit`} className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                      <PencilIcon className="w-5 h-5" />
+                    </Link>
+                    <button onClick={() => handleDelete(team._id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                      <TrashIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
               
               <p className="text-gray-600 dark:text-gray-300 text-sm mb-6 mt-2 line-clamp-2 font-medium">

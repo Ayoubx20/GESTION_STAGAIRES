@@ -40,6 +40,7 @@ const Sidebar = () => {
   // Navigation pour STAGIAIRE
   const internNavigation = [
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
+    { name: 'Mon Équipe', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Mes Documents', to: '/my-documents', icon: DocumentTextIcon },
   ];

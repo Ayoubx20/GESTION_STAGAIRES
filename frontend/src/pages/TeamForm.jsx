@@ -17,6 +17,7 @@ const TeamForm = () => {
   
   const [formData, setFormData] = useState({
     name: '',
+    project: '',
     description: '',
     interns: []
   });
@@ -45,6 +46,7 @@ const TeamForm = () => {
         
         setFormData({
           name: teamData.name || '',
+          project: teamData.project || '',
           description: teamData.description || '',
           interns: mappedInternIds
         });
@@ -126,6 +128,20 @@ const TeamForm = () => {
               onChange={handleChange}
               required
               placeholder="Ex: Équipe Développement Web"
+              className="input-field"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Travail Spécifique / Projet
+            </label>
+            <input
+              type="text"
+              name="project"
+              value={formData.project}
+              onChange={handleChange}
+              placeholder="Ex: Projet de fin d'études, Création d'application..."
               className="input-field"
             />
           </div>

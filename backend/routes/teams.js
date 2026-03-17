@@ -12,6 +12,13 @@ router.get('/', auth, async (req, res) => {
     const query = {};
     if (req.user.role === 'supervisor') {
       query.supervisor = req.user.id;
+    } else if (req.user.role === 'intern') {
+      const intern = await Intern.findOne({ user: req.user.id });
+      if (intern) {
+        query.interns = intern._id;
+      } else {
+        query.interns = null;
+      }
     }
     
     const teams = await Team.find(query)
@@ -76,6 +83,14 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
 
+    if (req.user.role === 'intern') {
+      const intern = await Intern.findOne({ user: req.user.id });
+      const isMember = intern && team.interns.some(i => i._id.toString() === intern._id.toString());
+      if (!isMember) {
+        return res.status(403).json({ success: false, message: 'Non autorisé' });
+      }
+    }
+
     res.json({ success: true, team });
   } catch (error) {
     console.error('Error fetching team:', error);
@@ -92,11 +107,12 @@ router.post('/', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
 
-    const { name, description, interns } = req.body;
+    const { name, description, project, interns } = req.body;
 
     const team = await Team.create({
       name,
       description,
+      project,
       interns: interns || [],
       supervisor: req.user.id
     });

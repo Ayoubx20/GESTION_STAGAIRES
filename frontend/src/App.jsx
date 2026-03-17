@@ -113,11 +113,7 @@ function App() {
                 } />
 
                 {/* ===== GESTION DES EQUIPES ===== */}
-                <Route path="teams" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <Teams />
-                  </ProtectedRoute>
-                } />
+                <Route path="teams" element={<Teams />} />
                 <Route path="teams/new" element={
                   <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
                     <TeamForm />
