@@ -1,15 +1,23 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
-  base: './',  // ← AJOUTEZ CETTE LIGNE (important pour Vercel)
+  base: '/',
   build: {
     outDir: 'dist',
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    rollupOptions: {
+      input: 'index.html'
+    }
+  },
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      }
+    }
   }
 })
