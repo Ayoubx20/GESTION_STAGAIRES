@@ -7,18 +7,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [react()],
-  root: '.',
-  server: {
-    port: 5173,
-    open: true
-  },
+  base: './',  // ← AJOUTEZ CETTE LIGNE (important pour Vercel)
   build: {
     outDir: 'dist',
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html')
-      }
-    }
+    assetsDir: 'assets'
   }
 })
