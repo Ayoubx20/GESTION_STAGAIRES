@@ -30,7 +30,21 @@ const Teams = () => {
     try {
       setLoading(true);
       const data = await teamService.getAll();
-      setTeams(data);
+      
+      const processedTeams = data.map(team => {
+        if (!team.interns) return team;
+        const seen = new Set();
+        const uniqueInterns = team.interns.filter(intern => {
+          // Deduplicate by user email to 100% prevent same user showing up multiple times
+          const id = intern.user?.email || intern.user?._id || intern.user || intern._id || intern;
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+        return { ...team, interns: uniqueInterns };
+      });
+
+      setTeams(processedTeams);
     } catch (error) {
       toast.error('Erreur lors du chargement des équipes');
     } finally {
@@ -92,7 +106,7 @@ const Teams = () => {
                     <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{team.interns?.length || 0} membres actifs</p>
                     {team.project && (
                       <span className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold leading-4 bg-primary-100 text-primary-800 dark:bg-primary-900/60 dark:text-primary-300 w-max border border-primary-200 dark:border-primary-800">
-                        Travail / Projet : {team.project}
+                        Travail à faire : {team.project}
                       </span>
                     )}
                   </div>

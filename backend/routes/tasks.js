@@ -151,6 +151,8 @@ router.put('/:id', auth, async (req, res) => {
 // @access  Private
 router.patch('/:id/status', auth, async (req, res) => {
   try {
+    const { status, progress } = req.body;
+
     let finalStatus = status;
 
     // Si un stagiaire marque une tâche comme terminée, elle passe en attente de validation

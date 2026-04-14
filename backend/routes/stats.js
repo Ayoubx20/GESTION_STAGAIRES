@@ -64,11 +64,38 @@ router.get('/reports', auth, async (req, res) => {
     let internProfileQuery = {};
 
     if (req.user.role === 'supervisor') {
-      const myInterns = await Intern.find({ supervisor: req.user.id }).select('user');
-      const internUserIds = myInterns.map(i => i.user.toString());
-      userQuery._id = { $in: internUserIds };
-      taskQuery.assignedTo = { $in: internUserIds };
-      internProfileQuery.supervisor = req.user.id;
+      const Team = require('../models/Team');
+      const myTeams = await Team.find({ supervisor: req.user.id }).select('interns');
+      
+      let teamInternIds = [];
+      myTeams.forEach(team => {
+        team.interns.forEach(internId => teamInternIds.push(internId.toString()));
+      });
+
+      const myDirectInterns = await Intern.find({ supervisor: req.user.id }).select('_id');
+      myDirectInterns.forEach(i => teamInternIds.push(i._id.toString()));
+
+      const uniqueInternIds = [...new Set(teamInternIds)];
+
+      if (uniqueInternIds.length > 0) {
+        const internDocs = await Intern.find({ _id: { $in: uniqueInternIds } }).select('user');
+        const internUserIds = internDocs.map(i => i.user?.toString()).filter(Boolean);
+        
+        if (internUserIds.length > 0) {
+          userQuery._id = { $in: internUserIds };
+          taskQuery.assignedTo = { $in: internUserIds };
+          // We don't redefine internProfileQuery strictly, because school is from Intern
+          internProfileQuery._id = { $in: uniqueInternIds };
+        } else {
+          userQuery._id = null;
+          taskQuery.assignedTo = null;
+          internProfileQuery._id = null;
+        }
+      } else {
+        userQuery._id = null;
+        taskQuery.assignedTo = null;
+        internProfileQuery._id = null;
+      }
     }
 
     // 1. General Stats

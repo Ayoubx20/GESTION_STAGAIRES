@@ -109,11 +109,13 @@ router.post('/', auth, async (req, res) => {
 
     const { name, description, project, interns } = req.body;
 
+    const uniqueInterns = Array.isArray(interns) ? [...new Set(interns)] : [];
+
     const team = await Team.create({
       name,
       description,
       project,
-      interns: interns || [],
+      interns: uniqueInterns,
       supervisor: req.user.id
     });
 
@@ -141,6 +143,10 @@ router.put('/:id', auth, async (req, res) => {
 
     if (req.user.role === 'supervisor' && team.supervisor.toString() !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
+    }
+
+    if (req.body.interns && Array.isArray(req.body.interns)) {
+      req.body.interns = [...new Set(req.body.interns)];
     }
 
     const updatedTeam = await Team.findByIdAndUpdate(
