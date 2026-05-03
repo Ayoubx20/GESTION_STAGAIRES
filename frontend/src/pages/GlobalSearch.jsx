@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
-import { 
-  UserCircleIcon, 
+import {
+  UserCircleIcon,
   ClipboardDocumentListIcon,
   ChevronRightIcon,
   MagnifyingGlassIcon,
@@ -10,7 +10,7 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../components/LoadingSpinner';
-
+// ayoub_aboujama
 const GlobalSearch = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
@@ -63,7 +63,7 @@ const GlobalSearch = () => {
             <p className="text-gray-500 dark:text-gray-400 font-medium">
               "{query}" • {results.interns.length + results.tasks.length} résultats trouvés
             </p>
-            <button 
+            <button
               onClick={performSearch}
               className="p-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-primary-50 dark:hover:bg-primary-900/40 text-gray-500 hover:text-primary-600 rounded-lg transition-all"
               title="Rafraîchir les résultats"
