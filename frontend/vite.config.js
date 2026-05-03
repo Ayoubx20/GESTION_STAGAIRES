@@ -13,7 +13,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          charts: ['recharts', 'chart.js', 'react-chartjs-2']
+          charts: ['recharts', 'chart.js', 'react-chartjs-2'],
+          ui: ['@headlessui/react', '@heroicons/react', 'lucide-react', 'react-hot-toast']
         }
       }
     }

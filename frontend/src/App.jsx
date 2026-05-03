@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
@@ -9,29 +9,29 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import Layout from './components/Layout.jsx';
 
 // Pages Publiques
-import Login from './pages/Login.jsx';
-import Register from './pages/Register.jsx';
-import RegistrationPending from './pages/RegistrationPending.jsx';
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const RegistrationPending = lazy(() => import('./pages/RegistrationPending.jsx'));
 
 // Pages Principales
-import Dashboard from './pages/Dashboard.jsx';
-import Interns from './pages/Interns.jsx';
-import InternDetail from './pages/InternDetail.jsx';
-import InternForm from './pages/InternForm.jsx';
-import Tasks from './pages/Tasks.jsx';
-import TaskDetail from './pages/TaskDetail.jsx';
-import TaskForm from './pages/TaskForm.jsx';
-import Teams from './pages/Teams.jsx';
-import TeamForm from './pages/TeamForm.jsx';
-import Profile from './pages/Profile.jsx';
-import Reports from './pages/Reports.jsx';
-import Settings from './pages/Settings.jsx';
-import Users from './pages/Users.jsx';
-import PendingApprovals from './pages/PendingApprovals.jsx';
-import Evaluations from './pages/Evaluations.jsx';
-import MyDocuments from './pages/MyDocuments.jsx';
-import GlobalSearch from './pages/GlobalSearch.jsx';
-import NotFound from './pages/NotFound.jsx';
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const Interns = lazy(() => import('./pages/Interns.jsx'));
+const InternDetail = lazy(() => import('./pages/InternDetail.jsx'));
+const InternForm = lazy(() => import('./pages/InternForm.jsx'));
+const Tasks = lazy(() => import('./pages/Tasks.jsx'));
+const TaskDetail = lazy(() => import('./pages/TaskDetail.jsx'));
+const TaskForm = lazy(() => import('./pages/TaskForm.jsx'));
+const Teams = lazy(() => import('./pages/Teams.jsx'));
+const TeamForm = lazy(() => import('./pages/TeamForm.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
+const Reports = lazy(() => import('./pages/Reports.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Users = lazy(() => import('./pages/Users.jsx'));
+const PendingApprovals = lazy(() => import('./pages/PendingApprovals.jsx'));
+const Evaluations = lazy(() => import('./pages/Evaluations.jsx'));
+const MyDocuments = lazy(() => import('./pages/MyDocuments.jsx'));
+const GlobalSearch = lazy(() => import('./pages/GlobalSearch.jsx'));
+const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 
 // Protected Route
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -72,7 +72,12 @@ function App() {
               }}
             />
 
-            <Routes>
+            <Suspense fallback={
+              <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+              </div>
+            }>
+              <Routes>
               {/* ========== ROUTES PUBLIQUES ========== */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -186,6 +191,7 @@ function App() {
               {/* ========== ROUTE 404 ========== */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </ThemeProvider>
         </LanguageProvider>
       </AuthProvider>
