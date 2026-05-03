@@ -199,7 +199,7 @@ const server = app.listen(PORT, () => {
 const gracefulShutdown = () => {
     console.log('🔄 Fermeture du serveur...');
     server.close(() => {
-        mongoose.connection.close(false, () => {
+        mongoose.connection.close(false).then(() => {
             console.log('✅ Connexions fermées');
             process.exit(0);
         });

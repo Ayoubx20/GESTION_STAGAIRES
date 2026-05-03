@@ -7,8 +7,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
-      input: 'index.html'
+      input: 'index.html',
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          charts: ['recharts', 'chart.js', 'react-chartjs-2']
+        }
+      }
     }
   },
   server: {
