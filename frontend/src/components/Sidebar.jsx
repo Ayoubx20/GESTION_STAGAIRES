@@ -18,7 +18,8 @@ import {
   ChevronRightIcon,
   UserGroupIcon,
   ClockIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = () => {
@@ -35,6 +36,7 @@ const Sidebar = () => {
     { name: 'Équipes', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Rapports', to: '/reports', icon: ChartBarIcon },
+    { name: 'Test Informatique', to: '/quiz', icon: AcademicCapIcon },
   ];
 
   // Navigation pour STAGIAIRE
@@ -43,6 +45,7 @@ const Sidebar = () => {
     { name: 'Mon Équipe', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Mes Documents', to: '/my-documents', icon: DocumentTextIcon },
+    { name: 'Test Informatique', to: '/quiz', icon: AcademicCapIcon },
   ];
 
   // Navigation ADMIN SEULEMENT

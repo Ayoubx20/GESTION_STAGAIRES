@@ -31,6 +31,7 @@ const PendingApprovals = lazy(() => import('./pages/PendingApprovals.jsx'));
 const Evaluations = lazy(() => import('./pages/Evaluations.jsx'));
 const MyDocuments = lazy(() => import('./pages/MyDocuments.jsx'));
 const GlobalSearch = lazy(() => import('./pages/GlobalSearch.jsx'));
+const Quiz = lazy(() => import('./pages/Quiz.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 
 // Protected Route
@@ -186,6 +187,9 @@ function App() {
 
                 {/* ===== RECHERCHE GLOBALE ===== */}
                 <Route path="search" element={<GlobalSearch />} />
+
+                {/* ===== TEST INFORMATIQUE ===== */}
+                <Route path="quiz" element={<Quiz />} />
               </Route>
 
               {/* ========== ROUTE 404 ========== */}
