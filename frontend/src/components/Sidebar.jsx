@@ -19,10 +19,11 @@ import {
   UserGroupIcon,
   ClockIcon,
   DocumentTextIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
-const Sidebar = () => {
+const Sidebar = ({ setMobileMenuOpen }) => {
   const { user, logout, isAdmin, isSupervisor, isIntern } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();

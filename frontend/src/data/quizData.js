@@ -61,21 +61,7 @@ export const questionsData = {
     { id: 59, question: "Quel protocole utilise généralement le port 53 ?", options: ["HTTP", "DNS", "FTP", "SMTP"], correctAnswer: 1 },
     { id: 60, question: "Quel est le rôle principal d'un système d'exploitation ?", options: ["Compiler les programmes", "Gérer les ressources matérielles et logicielles", "Créer des sites web", "Stocker les emails"], correctAnswer: 1 }
   ],
-  2: [
-    // Level 2 Questions (Intermediate)
-    { id: 1, question: "En POO, qu'est-ce que l'encapsulation ?", options: ["Cacher les détails d'implémentation", "Hériter d'une classe", "Utiliser plusieurs formes", "Compiler le code"], correctAnswer: 0 },
-    { id: 2, question: "Quel port est utilisé par défaut par le protocole SSH ?", options: ["21", "22", "80", "443"], correctAnswer: 1 },
-    { id: 3, question: "Qu'est-ce qu'une clé étrangère en SQL ?", options: ["Une clé pour crypter", "Un lien vers une clé primaire d'une autre table", "Une clé générée aléatoirement", "Une clé pour les invités"], correctAnswer: 1 },
-    { id: 4, question: "Quelle est la complexité temporelle du tri rapide (QuickSort) au pire cas ?", options: ["O(n)", "O(n log n)", "O(n²)", "O(1)"], correctAnswer: 2 },
-    { id: 5, question: "Que signifie le 'S' dans SOLID ?", options: ["Simple", "Single Responsibility", "Security", "Static"], correctAnswer: 1 },
-    // ... adding placeholders for the rest of level 2 to reach 60 later
-    ...Array.from({ length: 55 }, (_, i) => ({
-      id: i + 6,
-      question: `Question de Niveau 2 - Numéro ${i + 6} (En attente de contenu)`,
-      options: ["Option A", "Option B", "Option C", "Option D"],
-      correctAnswer: 0
-    }))
-  ],
+  2: [],
   3: [
     // Level 3 Questions (Advanced)
     { id: 1, question: "Quel est l'avantage principal des Microservices ?", options: ["Simplicité de déploiement", "Scalabilité indépendante", "Consommation mémoire réduite", "Vitesse d'exécution"], correctAnswer: 1 },

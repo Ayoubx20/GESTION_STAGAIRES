@@ -4,6 +4,8 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 
 const Layout = () => {
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
       {/* Decorative animated background elements */}
@@ -16,13 +18,21 @@ const Layout = () => {
         <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#374151_1px,transparent_1px)] [background-size:24px_24px] opacity-60"></div>
       </div>
 
-      <div className="z-10 relative h-full">
-        <Sidebar />
+      {/* Mobile Sidebar Backdrop */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      <div className={`z-50 lg:z-10 relative h-full transition-all duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} fixed lg:relative`}>
+        <Sidebar setMobileMenuOpen={setMobileMenuOpen} />
       </div>
       
       <div className="flex-1 flex flex-col overflow-hidden z-10 relative backdrop-blur-sm">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
+        <Navbar setMobileMenuOpen={setMobileMenuOpen} />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 scroll-smooth">
           <Outlet />
         </main>
       </div>
