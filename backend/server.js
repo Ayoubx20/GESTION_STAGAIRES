@@ -40,7 +40,21 @@ const app = express();
 // 4. MIDDLEWARES DE SÉCURITÉ ET PERFORMANCE
 // ============================================
 app.use(helmet({
-    contentSecurityPolicy: false, // À adapter selon besoins frontend
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://trusted-cdn.com"], // À adapter avec vos CDNs de confiance
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            frameAncestors: ["'none'"], // Protection contre le Clickjacking (alternative moderne à X-Frame-Options)
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https://quizzapi.jomoreschi.fr"] // Autorise l'API de quiz externe
+        },
+    },
+    frameguard: {
+        action: 'deny' // Définit X-Frame-Options sur DENY
+    },
+    xContentTypeOptions: true, // Définit X-Content-Type-Options sur nosniff
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 app.use(compression());
 

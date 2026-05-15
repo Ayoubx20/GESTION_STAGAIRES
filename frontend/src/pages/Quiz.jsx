@@ -37,27 +37,30 @@ const Quiz = () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetching from a reliable French Quiz API
-      const response = await fetch('https://quizzapi.jomoreschi.fr/api/questions?limit=10&category=informatique');
+      // Fetching from the updated v2 API
+      const response = await fetch('https://quizzapi.jomoreschi.fr/api/v2/quiz?limit=10&category=science');
       const data = await response.json();
       
-      const mappedQuestions = data.map((q, idx) => ({
-        id: `api-${idx}`,
-        question: q.question,
-        options: [q.answer, ...q.others], // Mix correct answer with others
-        correctAnswer: 0, // In this API, we need to shuffle. Let's shuffle properly.
-      })).map(q => {
+      if (!data.quizzes || !Array.isArray(data.quizzes)) {
+        throw new Error("Invalid API response format");
+      }
+
+      const mappedQuestions = data.quizzes.map((q, idx) => {
+        // Combine correct answer with bad answers
+        const allOptions = [q.answer, ...q.badAnswers];
+        
         // Shuffle options
-        const options = [...q.options];
-        const correctText = options[0];
-        for (let i = options.length - 1; i > 0; i--) {
+        const shuffledOptions = [...allOptions];
+        for (let i = shuffledOptions.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          [options[i], options[j]] = [options[j], options[i]];
+          [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
         }
+
         return {
-          ...q,
-          options,
-          correctAnswer: options.indexOf(correctText)
+          id: `api-${idx}`,
+          question: q.question,
+          options: shuffledOptions,
+          correctAnswer: shuffledOptions.indexOf(q.answer)
         };
       });
 
@@ -236,7 +239,10 @@ const Quiz = () => {
           {[
             { id: 1, title: "Niveau 1", desc: "Débutant : Concepts de base et matériel.", icon: <FireIcon className="w-8 h-8" />, color: "border-green-500 text-green-600 bg-green-50 dark:bg-green-900/20" },
             { id: 2, title: "Niveau 2", desc: "Intermédiaire : Réseaux et bases de données.", icon: <BoltIcon className="w-8 h-8" />, color: "border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-900/20" },
-            { id: 3, title: "Niveau 3", desc: "Avancé : Architecture et sécurité.", icon: <StarIcon className="w-8 h-8" />, color: "border-purple-500 text-purple-600 bg-purple-50 dark:bg-purple-900/20" }
+            { id: 3, title: "Niveau 3", desc: "Avancé : Architecture et sécurité.", icon: <StarIcon className="w-8 h-8" />, color: "border-purple-500 text-purple-600 bg-purple-50 dark:bg-purple-900/20" },
+            { id: 4, title: "Niveau 4", desc: "Synthèse : Examen complet des compétences.", icon: <AcademicCapIcon className="w-8 h-8" />, color: "border-orange-500 text-orange-600 bg-orange-50 dark:bg-orange-900/20" },
+            { id: 5, title: "Niveau 5", desc: "Web Dev : JavaScript, React et CSS.", icon: <BoltIcon className="w-8 h-8" />, color: "border-cyan-500 text-cyan-600 bg-cyan-50 dark:bg-cyan-900/20" },
+            { id: 6, title: "Niveau 6", desc: "Expert : Organisation Judiciaire et IT.", icon: <StarIcon className="w-8 h-8" />, color: "border-rose-500 text-rose-600 bg-rose-50 dark:bg-rose-900/20" }
           ].map((level) => (
             <button
               key={level.id}
