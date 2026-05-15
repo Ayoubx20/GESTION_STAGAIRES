@@ -23,12 +23,11 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
-const Sidebar = ({ setMobileMenuOpen }) => {
+const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
   const { user, logout, isAdmin, isSupervisor, isIntern } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
 
   // Navigation pour ADMIN et SUPERVISEUR
   const adminSupervisorNavigation = [
@@ -69,10 +68,10 @@ const Sidebar = ({ setMobileMenuOpen }) => {
   const navigation = isIntern ? internNavigation : adminSupervisorNavigation;
 
   return (
-    <div className={`relative ${collapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-white dark:bg-gray-800 shadow-xl lg:shadow-lg transition-all duration-300 flex flex-col h-screen`}>
+    <div className={`relative w-full h-full bg-white dark:bg-gray-800 shadow-xl lg:shadow-lg transition-all duration-300 flex flex-col`}>
       {/* Toggle button - Clean pill style on the divider */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={() => setCollapsed?.(!collapsed)}
         className="hidden lg:flex absolute -right-3 top-[28px] bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 rounded-full p-1.5 shadow-md border border-gray-100 dark:border-gray-600 hover:bg-primary-50 dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-110 z-30 group"
       >
         {collapsed ? (

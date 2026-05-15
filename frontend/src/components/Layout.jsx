@@ -5,11 +5,12 @@ import Navbar from './Navbar';
 
 const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(false);
 
   // Close mobile menu on resize to desktop
   React.useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) { // 1024 is 'lg' in tailwind
+      if (window.innerWidth >= 1024) {
         setMobileMenuOpen(false);
       }
     };
@@ -18,41 +19,43 @@ const Layout = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
-      {/* Decorative animated background elements */}
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
+      {/* Decorative background (stays behind everything) */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary-400/20 dark:bg-primary-600/10 rounded-full mix-blend-multiply blur-3xl opacity-70 animate-float" style={{ animationDuration: '8s' }}></div>
-        <div className="absolute top-[20%] right-[-10%] w-[35%] h-[40%] bg-purple-400/20 dark:bg-purple-600/10 rounded-full mix-blend-multiply blur-3xl opacity-70 animate-float" style={{ animationDuration: '10s', animationDelay: '1s' }}></div>
-        <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-blue-400/20 dark:bg-blue-600/10 rounded-full mix-blend-multiply blur-3xl opacity-70 animate-float" style={{ animationDuration: '12s', animationDelay: '2s' }}></div>
-        
-        {/* Dot grid texture */}
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#374151_1px,transparent_1px)] [background-size:24px_24px] opacity-60"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary-400/10 rounded-full blur-3xl opacity-50 animate-float" style={{ animationDuration: '8s' }}></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-400/10 rounded-full blur-3xl opacity-50 animate-float" style={{ animationDuration: '10s' }}></div>
       </div>
 
-      {/* Mobile Sidebar Backdrop */}
-      {mobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Sidebar wrapper */}
+      {/* MOBILE SIDEBAR OVERLAY */}
+      {/* Backdrop */}
       <div 
-        className={`
-          fixed lg:relative top-0 left-0 z-50 transform 
-          lg:translate-x-0 lg:z-10 h-screen
-          transition-all duration-300 ease-in-out
-          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
+        className={`fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[60] transition-opacity duration-300 lg:hidden ${
+          mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      {/* Mobile Drawer */}
+      <div 
+        className={`fixed inset-y-0 left-0 z-[70] w-72 transform transition-transform duration-300 ease-in-out lg:hidden ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
-        <Sidebar setMobileMenuOpen={setMobileMenuOpen} />
+        <Sidebar setMobileMenuOpen={setMobileMenuOpen} collapsed={false} />
       </div>
-      
-      <div className="flex-1 flex flex-col overflow-hidden z-10 relative backdrop-blur-sm">
+
+      {/* DESKTOP SIDEBAR */}
+      <div className={`hidden lg:flex lg:flex-shrink-0 z-20 transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
+        <Sidebar setMobileMenuOpen={setMobileMenuOpen} collapsed={collapsed} setCollapsed={setCollapsed} />
+      </div>
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden z-10 relative">
         <Navbar setMobileMenuOpen={setMobileMenuOpen} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 scroll-smooth">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth scrollbar-hide">
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

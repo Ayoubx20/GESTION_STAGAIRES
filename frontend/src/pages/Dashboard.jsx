@@ -227,7 +227,7 @@ const Dashboard = () => {
       {/* Welcome Header */}
       <div className="flex justify-between items-center opacity-0 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
         <div>
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-primary-600 via-primary-500 to-indigo-600 dark:from-primary-400 dark:to-indigo-300 leading-tight">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-primary-600 via-primary-500 to-indigo-600 dark:from-primary-400 dark:to-indigo-300 leading-tight">
             👋 Bonjour, {user?.firstName} {user?.lastName}!
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
