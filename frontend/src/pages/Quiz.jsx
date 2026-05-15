@@ -205,7 +205,7 @@ const Quiz = () => {
       <div className="max-w-6xl mx-auto py-12 px-4">
         <div className="text-center mb-12 animate-fade-in">
           <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white mb-4">
-            Centre de Test
+            Test
           </h1>
           <p className="text-lg text-gray-500 dark:text-gray-400">
             Choisissez un niveau fixe ou relevez le défi quotidien mis à jour automatiquement.
