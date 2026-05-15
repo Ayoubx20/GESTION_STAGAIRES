@@ -40,7 +40,19 @@ const app = express();
 // 4. MIDDLEWARES DE SÉCURITÉ ET PERFORMANCE
 // ============================================
 app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline often needed for dev/some libs
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'", "https://quizzapi.jomoreschi.fr"],
+            frameAncestors: ["'none'"], // Same as X-Frame-Options DENY
+        },
+    },
+    xFrameOptions: { action: 'deny' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 app.use(compression());
 
