@@ -69,11 +69,11 @@ const Sidebar = ({ setMobileMenuOpen }) => {
   const navigation = isIntern ? internNavigation : adminSupervisorNavigation;
 
   return (
-    <div className={`relative ${collapsed ? 'w-20' : 'w-64'} bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 flex flex-col h-screen`}>
+    <div className={`relative ${collapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-white dark:bg-gray-800 shadow-xl lg:shadow-lg transition-all duration-300 flex flex-col h-screen`}>
       {/* Toggle button - Clean pill style on the divider */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-[28px] bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 rounded-full p-1.5 shadow-md border border-gray-100 dark:border-gray-600 hover:bg-primary-50 dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-110 z-30 group"
+        className="hidden lg:flex absolute -right-3 top-[28px] bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 rounded-full p-1.5 shadow-md border border-gray-100 dark:border-gray-600 hover:bg-primary-50 dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-110 z-30 group"
       >
         {collapsed ? (
           <ChevronRightIcon className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
@@ -82,22 +82,26 @@ const Sidebar = ({ setMobileMenuOpen }) => {
         )}
       </button>
 
-      {/* Logo */}
-      <div className="h-20 flex items-center justify-center border-b border-gray-100 dark:border-gray-700/50">
-        {collapsed ? (
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-primary-500/20 transform hover:rotate-6 transition-transform">
-            <span className="text-white font-bold text-xl">GS</span>
+      {/* Logo & Mobile Close */}
+      <div className="h-20 flex items-center justify-between px-6 border-b border-gray-100 dark:border-gray-700/50">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary-600 to-indigo-600 flex items-center justify-center shadow-md">
+            <span className="text-white font-bold text-sm">GS</span>
           </div>
-        ) : (
-          <div className="flex items-center space-x-2 px-6">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary-600 to-indigo-600 flex items-center justify-center shadow-md">
-              <span className="text-white font-bold text-sm">GS</span>
-            </div>
+          {!collapsed && (
             <h1 className="text-lg font-black bg-gradient-to-r from-primary-600 via-primary-500 to-indigo-600 bg-clip-text text-transparent tracking-tight">
               GESTION <span className="text-gray-400 dark:text-gray-500 font-medium">STAGIAIRE</span>
             </h1>
-          </div>
-        )}
+          )}
+        </div>
+        
+        {/* Mobile close button */}
+        <button 
+          className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <XMarkIcon className="w-6 h-6" />
+        </button>
       </div>
 
       {/* Navigation principale */}
@@ -106,6 +110,7 @@ const Sidebar = ({ setMobileMenuOpen }) => {
           <NavLink
             key={item.name}
             to={item.to}
+            onClick={() => setMobileMenuOpen(false)}
             className={({ isActive }) =>
               `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
                 ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
@@ -123,6 +128,7 @@ const Sidebar = ({ setMobileMenuOpen }) => {
           <NavLink
             key={item.name}
             to={item.to}
+            onClick={() => setMobileMenuOpen(false)}
             className={({ isActive }) =>
               `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
                 ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
@@ -155,6 +161,7 @@ const Sidebar = ({ setMobileMenuOpen }) => {
           <NavLink
             key={item.name}
             to={item.to}
+            onClick={() => setMobileMenuOpen(false)}
             className={({ isActive }) =>
               `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
                 ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'

@@ -133,8 +133,8 @@ const Profile = () => {
 
       {/* Profile Header Card */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start justify-between space-y-6 md:space-y-0">
+          <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 text-center md:text-left">
             {/* Avatar */}
             <div className="relative group">
               <div className="w-24 h-24 rounded-full bg-gradient-to-r from-primary-500 to-primary-600 flex items-center justify-center text-white text-3xl font-bold">
@@ -160,7 +160,7 @@ const Profile = () => {
                 {user?.role === 'admin' ? 'Administrateur' :
                  user?.role === 'supervisor' ? 'Superviseur' : 'Stagiaire'}
               </p>
-              <div className="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center justify-center md:justify-start mt-2 text-sm text-gray-500 dark:text-gray-400">
                 <CalendarIcon className="w-4 h-4 mr-2" />
                 Membre depuis {format(new Date(user?.createdAt || new Date()), 'dd MMMM yyyy', { locale: fr })}
               </div>
@@ -169,7 +169,7 @@ const Profile = () => {
 
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="btn-secondary"
+            className="btn-secondary w-full md:w-auto"
           >
             <PencilIcon className="w-4 h-4 mr-2" />
             {isEditing ? 'Annuler' : 'Modifier le profil'}

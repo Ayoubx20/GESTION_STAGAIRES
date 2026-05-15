@@ -51,7 +51,7 @@ const AdminPendingInterns = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Demandes d'inscription en attente</h1>
-      
+
       {message && (
         <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded">
           {message}
@@ -59,7 +59,7 @@ const AdminPendingInterns = () => {
       )}
 
       {pendingInterns.length === 0 ? (
-        <p className="text-gray-500">Aucune demande en attente</p>
+        <p className="text-gray-500">Aucune demande en attente.</p>
       ) : (
         <div className="grid gap-4">
           {pendingInterns.map((intern) => (

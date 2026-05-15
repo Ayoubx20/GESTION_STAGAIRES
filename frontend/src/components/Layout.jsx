@@ -6,6 +6,17 @@ import Navbar from './Navbar';
 const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
+  // Close mobile menu on resize to desktop
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) { // 1024 is 'lg' in tailwind
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
       {/* Decorative animated background elements */}
@@ -26,7 +37,15 @@ const Layout = () => {
         />
       )}
 
-      <div className={`z-50 lg:z-10 relative h-full transition-all duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} fixed lg:relative`}>
+      {/* Sidebar wrapper */}
+      <div 
+        className={`
+          fixed lg:relative top-0 left-0 z-50 transform 
+          lg:translate-x-0 lg:z-10 h-screen
+          transition-all duration-300 ease-in-out
+          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
         <Sidebar setMobileMenuOpen={setMobileMenuOpen} />
       </div>
       

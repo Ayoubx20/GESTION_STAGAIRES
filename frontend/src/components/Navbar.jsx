@@ -12,11 +12,12 @@ import {
   ChevronDownIcon,
   UserCircleIcon,
   Cog6ToothIcon,
-  ArrowLeftOnRectangleIcon
+  ArrowLeftOnRectangleIcon,
+  Bars3Icon
 } from '@heroicons/react/24/outline';
 import { Menu, Transition } from '@headlessui/react';
 
-const Navbar = () => {
+const Navbar = ({ setMobileMenuOpen }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -79,8 +80,18 @@ const Navbar = () => {
     <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
+          {/* Mobile menu button */}
+          <button
+            type="button"
+            className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <span className="sr-only">Open sidebar</span>
+            <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+          </button>
+
           {/* Left section - Search */}
-          <div className="flex-1 max-w-lg">
+          <div className="flex-1 max-w-lg ml-4 lg:ml-0">
             <form onSubmit={handleSearch} className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
