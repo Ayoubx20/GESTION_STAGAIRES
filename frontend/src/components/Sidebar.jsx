@@ -36,6 +36,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
     { name: 'Équipes', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Rapports', to: '/reports', icon: ChartBarIcon },
+    { name: 'Pointage', to: '/timesheet', icon: ClockIcon },
     { name: 'Test Informatique', to: '/quiz', icon: AcademicCapIcon },
   ];
 
@@ -45,6 +46,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
     { name: 'Mon Équipe', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Mes Documents', to: '/my-documents', icon: DocumentTextIcon },
+    { name: 'Pointage', to: '/timesheet', icon: ClockIcon },
     { name: 'Test Informatique', to: '/quiz', icon: AcademicCapIcon },
   ];
 

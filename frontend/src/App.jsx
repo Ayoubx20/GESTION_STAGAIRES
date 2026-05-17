@@ -34,6 +34,7 @@ const MyDocuments = lazy(() => import('./pages/MyDocuments.jsx'));
 const GlobalSearch = lazy(() => import('./pages/GlobalSearch.jsx'));
 const Quiz = lazy(() => import('./pages/Quiz.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
+const Timesheet = lazy(() => import('./pages/Timesheet.jsx'));
 
 // Protected Route
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -179,6 +180,7 @@ function App() {
                 {/* ===== AUTRES PAGES ===== */}
                 <Route path="profile" element={<Profile />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="timesheet" element={<Timesheet />} />
 
                 {/* ===== DOCUMENTS STAGIAIRE ===== */}
                 <Route path="my-documents" element={
