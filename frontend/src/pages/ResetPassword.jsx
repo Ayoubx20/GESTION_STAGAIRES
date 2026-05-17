@@ -1,30 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '../contexts/AuthContext';
-import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, EyeIcon, EyeSlashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
-const Login = () => {
+const ResetPassword = () => {
+  const { token } = useParams();
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { register, handleSubmit, watch, formState: { errors } } = useForm();
 
-  // Redirection si déjà connecté
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
+  const password = watch('password');
 
   const onSubmit = async (data) => {
     setLoading(true);
-    const result = await login(data.email, data.password);
-    setLoading(false);
-    
-    if (result.success) {
-      navigate('/dashboard', { replace: true });
+    try {
+      const response = await api.post(`/auth/reset-password/${token}`, { password: data.password });
+      if (response.success) {
+        toast.success('Mot de passe réinitialisé avec succès !');
+        navigate('/login');
+      } else {
+        toast.error(response.message || "Une erreur est survenue");
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Le lien de réinitialisation est invalide ou a expiré';
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,46 +45,21 @@ const Login = () => {
             Gestion Stagiaire
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Connectez-vous pour accéder à votre espace
+            Nouveau mot de passe
           </p>
         </div>
 
-        {/* Login Form */}
+        {/* Card Container */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Email Field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Adresse email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <EnvelopeIcon className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  {...register('email', { 
-                    required: 'L\'email est requis',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Email invalide'
-                    }
-                  })}
-                  className={`input-field pl-10 ${errors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="vous@exemple.com"
-                />
-              </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+              Veuillez saisir votre nouveau mot de passe ci-dessous.
+            </p>
 
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Mot de passe
+                Nouveau mot de passe
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -88,7 +68,6 @@ const Login = () => {
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
                   {...register('password', { 
                     required: 'Le mot de passe est requis',
                     minLength: {
@@ -116,25 +95,40 @@ const Login = () => {
               )}
             </div>
 
-            {/* Remember me & Forgot password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
+            {/* Confirm Password Field */}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Confirmer le mot de passe
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <LockClosedIcon className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  {...register('confirmPassword', { 
+                    required: 'Veuillez confirmer votre mot de passe',
+                    validate: value => value === password || 'Les mots de passe ne correspondent pas'
+                  })}
+                  className={`input-field pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  placeholder="••••••••"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Se souvenir de moi
-                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  {showConfirmPassword ? (
+                    <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  )}
+                </button>
               </div>
-
-              <div className="text-sm">
-                <Link to="/forgot-password" className="font-medium text-primary-600 hover:text-primary-500">
-                  Mot de passe oublié?
-                </Link>
-              </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+              )}
             </div>
 
             {/* Submit Button */}
@@ -146,30 +140,25 @@ const Login = () => {
               {loading ? (
                 <div className="flex items-center justify-center">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Connexion...
+                  Mise à jour...
                 </div>
               ) : (
-                'Se connecter'
+                'Réinitialiser le mot de passe'
               )}
             </button>
           </form>
 
-          {/* Register link */}
-          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            Pas encore de compte?{' '}
-            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
-              Créer un compte
+          {/* Back to Login Link */}
+          <div className="mt-6 text-center">
+            <Link to="/login" className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-500">
+              <ArrowLeftIcon className="h-4 w-4 mr-2" />
+              Retour à la connexion
             </Link>
-          </p>
-
-          {/* Demo accounts */}
-          
-           
           </div>
-        
+        </div>
       </div>
     </div>
   );
 };
 
-export default Login;
+export default ResetPassword;

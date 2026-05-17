@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const fs = require('fs').promises; // Utiliser la version promises pour éviter les blocages
 const path = require('path');
+const crypto = require('crypto');
+const { sendPasswordResetEmail } = require('../config/email');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -407,5 +409,98 @@ exports.registerWithCV = async (req, res) => {
       success: false, 
       message: error.message || 'Erreur serveur' 
     });
+  }
+};
+
+// @desc    Forgot Password
+// @route   POST /api/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Veuillez fournir un e-mail' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Aucun utilisateur avec cet e-mail' });
+    }
+
+    // Générer un code à 6 chiffres
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hacher le code et le stocker avec expiration
+    user.resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetCode)
+      .digest('hex');
+
+    // Expiration dans 1 heure
+    user.resetPasswordExpires = Date.now() + 3600000;
+
+    await user.save({ validateBeforeSave: false });
+
+    // Envoyer l'e-mail
+    try {
+      const emailSent = await sendPasswordResetEmail(user.email, resetCode);
+      if (!emailSent) {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save({ validateBeforeSave: false });
+        return res.status(500).json({ success: false, message: "Impossible d'envoyer l'e-mail de réinitialisation" });
+      }
+
+      res.status(200).json({ success: true, message: 'E-mail de réinitialisation envoyé avec succès' });
+    } catch (err) {
+      console.error('Erreur lors de l\'envoi de l\'e-mail:', err);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      return res.status(500).json({ success: false, message: "Erreur lors de l'envoi de l'e-mail" });
+    }
+  } catch (error) {
+    console.error('❌ ERREUR DANS FORGOTPASSWORD:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// @desc    Reset Password
+// @route   POST /api/auth/reset-password
+// @access  Public
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, code, password } = req.body;
+    if (!email || !code || !password) {
+      return res.status(400).json({ success: false, message: 'Email, code et nouveau mot de passe sont requis' });
+    }
+
+    // Obtenir le code haché
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(code.toString().trim())
+      .digest('hex');
+
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+      resetPasswordToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Le code de réinitialisation est invalide ou a expiré' });
+    }
+
+    // Changer le mot de passe
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Mot de passe réinitialisé avec succès' });
+  } catch (error) {
+    console.error('❌ ERREUR DANS RESETPASSWORD:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

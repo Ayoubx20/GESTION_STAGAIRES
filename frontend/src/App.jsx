@@ -12,6 +12,7 @@ import Layout from './components/Layout.jsx';
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const RegistrationPending = lazy(() => import('./pages/RegistrationPending.jsx'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword.jsx'));
 
 // Pages Principales
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
@@ -83,6 +84,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/registration-pending" element={<RegistrationPending />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
 
               {/* ========== ROUTES PROTÉGÉES ========== */}
               <Route path="/" element={

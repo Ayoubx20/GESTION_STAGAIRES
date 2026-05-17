@@ -10,34 +10,36 @@ const userSchema = new mongoose.Schema({
   phone: String,
   isActive: { type: Boolean, default: true },
   isApproved: { type: Boolean, default: false },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
   createdAt: { type: Date, default: Date.now },
   lastLogin: { type: Date }
 });
 
-// ✅ SOLUTION FINALE - Sans utiliser 'next' (return Promise)
+// ✅ L7el lkher - Bla mankhedmo 'next' (return Promise)
 userSchema.pre('save', async function() {
   console.log('🔧 Hook pre-save appelé');
   
   try {
-    // Vérifier si le mot de passe est modifié
+    // Nchoufo wesh lmot de passe tbeddel
     if (!this.isModified('password')) {
       return;
     }
 
-    // Hacher le mot de passe
+    // Nhachiw lmot de passe
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(this.password, salt);
     
-    // Remplacer par le hash
+    // Nbedloha bel hash
     this.password = hash;
     console.log('✅ Mot de passe haché avec succès');
   } catch (error) {
     console.error('❌ Erreur:', error);
-    throw error; // Important: throw l'erreur au lieu de next(error)
+    throw error; // Mohim: nlawho l'erreur fblast next(error)
   }
 });
 
-// Méthode de comparaison
+// Méthode bach n9arno lmot de passe
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };

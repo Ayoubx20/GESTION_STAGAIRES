@@ -1,7 +1,7 @@
 // backend/config/email.js
 const nodemailer = require('nodemailer');
 
-// Configuration du transporteur email
+// Configuration dyal email (transporter)
 const transporter = nodemailer.createTransport({
   service: 'gmail', // ou utilisez un autre service (Outlook, Yahoo, etc.)
   auth: {
@@ -10,8 +10,28 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Fonction pour envoyer un email
+// Fonction bach nsifto email
 const sendEmail = async (to, subject, html) => {
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+  const isConfigured = process.env.EMAIL_USER && process.env.EMAIL_PASS;
+
+  if (!isConfigured) {
+    if (isDev) {
+      console.log('----------------------------------------------------');
+      console.log('⚠️  [SIMULATION EMAIL - MODE DEV] ⚠️');
+      console.log(`Destinataire : ${to}`);
+      console.log(`Sujet : ${subject}`);
+      const codeMatch = html.match(/>\s*(\d{6})\s*<\/span>/);
+      if (codeMatch) {
+        console.log(`🔢 Code détecté : ${codeMatch[1]}`);
+      }
+      console.log('----------------------------------------------------');
+      return true;
+    }
+    console.error('❌ Configuration e-mail manquante (EMAIL_USER & EMAIL_PASS).');
+    return false;
+  }
+
   try {
     const mailOptions = {
       from: `"Gestion Stagiaire" <${process.env.EMAIL_USER}>`,
@@ -25,11 +45,24 @@ const sendEmail = async (to, subject, html) => {
     return true;
   } catch (error) {
     console.error('❌ Erreur envoi email:', error);
+    
+    if (isDev) {
+      console.log('----------------------------------------------------');
+      console.log('⚠️  [SIMULATION DÉFAILLANCE - EMAIL SIMULÉ EN DEV] ⚠️');
+      console.log(`Destinataire : ${to}`);
+      console.log(`Sujet : ${subject}`);
+      const codeMatch = html.match(/>\s*(\d{6})\s*<\/span>/);
+      if (codeMatch) {
+        console.log(`🔢 Code détecté : ${codeMatch[1]}`);
+      }
+      console.log('----------------------------------------------------');
+      return true;
+    }
     return false;
   }
 };
 
-// Email de confirmation d'approbation
+// Email dyal l'approbation dyal lcompte
 const sendApprovalEmail = async (user) => {
   const subject = '✅ Votre compte Gestion Stagiaire a été approuvé';
   const html = `
@@ -173,8 +206,43 @@ const sendRejectionEmail = async (user) => {
   return await sendEmail(user.email, subject, html);
 };
 
+// Email de réinitialisation de mot de passe
+const sendPasswordResetEmail = async (email, code) => {
+  const subject = '🔑 Code de réinitialisation de votre mot de passe - Gestion Stagiaire';
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #4f46e5;">Gestion Stagiaire</h1>
+      </div>
+      
+      <h2 style="color: #333;">Bonjour,</h2>
+      
+      <p style="color: #666; font-size: 16px; line-height: 1.5;">
+        Vous recevez cet e-mail car vous (ou quelqu'un d'autre) avez demandé la réinitialisation du mot de passe de votre compte.
+      </p>
+      
+      <p style="color: #666; font-size: 16px; line-height: 1.5;">
+        Voici votre code de vérification à 6 chiffres (valable 1 heure) :
+      </p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <span style="background-color: #f3f4f6; color: #4f46e5; padding: 15px 30px; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 8px; display: inline-block;">
+          ${code}
+        </span>
+      </div>
+      
+      <p style="color: #999; font-size: 14px; margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
+        Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet e-mail. Votre mot de passe restera inchangé.
+      </p>
+    </div>
+  `;
+
+  return await sendEmail(email, subject, html);
+};
+
 module.exports = {
   sendApprovalEmail,
   sendRejectionEmail,
-  sendNewRegistrationEmail
+  sendNewRegistrationEmail,
+  sendPasswordResetEmail
 };
