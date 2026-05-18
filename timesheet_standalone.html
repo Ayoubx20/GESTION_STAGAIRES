@@ -435,13 +435,40 @@
             return date >= periodStart && date <= periodEnd;
         }
 
+        function getDayData(dateKey) {
+            const val = timesheetData[dateKey];
+            if (!val) return { hours: 0, transportOnly: false };
+            if (typeof val === 'object') {
+                return { hours: val.hours || 0, transportOnly: !!val.transportOnly };
+            }
+            return { hours: parseInt(val, 10) || 0, transportOnly: false };
+        }
+
         function updateHour(dateKey, delta) {
-            const current = timesheetData[dateKey] || 0;
-            let newVal = current + delta;
-            if (newVal <= 0) {
+            const dayData = getDayData(dateKey);
+            const newDayData = {
+                ...dayData,
+                hours: Math.max(0, dayData.hours + delta)
+            };
+            if (newDayData.hours === 0 && !newDayData.transportOnly) {
                 delete timesheetData[dateKey];
             } else {
-                timesheetData[dateKey] = newVal;
+                timesheetData[dateKey] = newDayData;
+            }
+            localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
+            renderCalendar();
+        }
+
+        function toggleTransportOnly(dateKey) {
+            const dayData = getDayData(dateKey);
+            const newDayData = {
+                ...dayData,
+                transportOnly: !dayData.transportOnly
+            };
+            if (newDayData.hours === 0 && !newDayData.transportOnly) {
+                delete timesheetData[dateKey];
+            } else {
+                timesheetData[dateKey] = newDayData;
             }
             localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
             renderCalendar();
@@ -541,9 +568,10 @@
             let current = new Date(periodStart);
             while (current <= periodEnd) {
                 const key = formatDateKey(current.getFullYear(), current.getMonth(), current.getDate());
-                const hours = timesheetData[key] || 0;
+                const dayData = getDayData(key);
+                const hours = dayData.hours;
                 const hoursPay = hours * HOURLY_RATE;
-                const transport = hours > 0 ? DAILY_TRANSPORT : 0;
+                const transport = (hours > 0 || dayData.transportOnly) ? DAILY_TRANSPORT : 0;
                 const total = hoursPay + transport;
                 csv += `${key},${hours},${hoursPay},${transport},${total}\n`;
                 current.setDate(current.getDate() + 1);
@@ -612,19 +640,23 @@
                 const cellMonth = date.getMonth();
                 const dayNumber = date.getDate();
                 const dateKey = formatDateKey(cellYear, cellMonth, dayNumber);
-                const hours = timesheetData[dateKey] || 0;
+                const dayData = getDayData(dateKey);
+                const hours = dayData.hours;
+                const transportOnly = dayData.transportOnly;
+
+                const hasTransport = hours > 0 || transportOnly;
 
                 totalHoursPeriod += hours;
-                if (hours > 0) workedDaysPeriod++;
+                if (hasTransport) workedDaysPeriod++;
 
                 const isToday = (cellYear === today.getFullYear() && cellMonth === today.getMonth() && dayNumber === today.getDate());
 
-                const transport = hours > 0 ? DAILY_TRANSPORT : 0;
+                const transport = hasTransport ? DAILY_TRANSPORT : 0;
                 const dailyTotal = (hours * HOURLY_RATE) + transport;
 
                 const cell = document.createElement('div');
-                cell.className = `day-cell ${isToday ? 'today' : ''} ${hours > 0 ? 'active' : ''}`;
-                if (hours > 0) {
+                cell.className = `day-cell ${isToday ? 'today' : ''} ${hasTransport ? 'active' : ''}`;
+                if (hasTransport) {
                     cell.style.backgroundColor = 'rgba(16, 185, 129, 0.08)';
                     cell.style.borderColor = 'var(--success)';
                 }
@@ -636,12 +668,21 @@
                         <span class="hours-value">${hours}</span>
                         <button onclick="updateHour('${dateKey}', 1)">+</button>
                     </div>
-                    ${hours > 0 ? `
+                    ${hasTransport ? `
                         <div class="day-total">
                             ${dailyTotal} DH
                             <div class="transport-badge">+${transport} DH transport</div>
                         </div>
                     ` : ''}
+                    <div class="transport-toggle-container" style="margin-top: 8px; border-top: 1px solid var(--border-color); padding-top: 6px;">
+                        <button 
+                            onclick="toggleTransportOnly('${dateKey}')"
+                            ${hours > 0 ? 'disabled' : ''}
+                            style="width: 100%; font-size: 0.65rem; padding: 4px; border-radius: 4px; border: 1px solid ${transportOnly ? 'var(--warning)' : 'var(--border-color)'}; background: ${transportOnly ? 'rgba(245, 158, 11, 0.1)' : 'transparent'}; color: ${transportOnly ? 'var(--warning)' : 'var(--text-main)'}; font-weight: bold; cursor: ${hours > 0 ? 'not-allowed' : 'pointer'}; transition: all 0.2s;"
+                        >
+                            🚗 ${transportOnly ? 'Trans. Seul Actif' : 'Ajouter Trans.'}
+                        </button>
+                    </div>
                 `;
 
                 grid.appendChild(cell);

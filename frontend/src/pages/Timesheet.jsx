@@ -108,19 +108,51 @@ const Timesheet = () => {
     }
   };
 
+  const getDayData = (dateKey) => {
+    const val = data[dateKey];
+    if (!val) return { hours: 0, transportOnly: false };
+    if (typeof val === 'object') {
+      return { hours: val.hours || 0, transportOnly: !!val.transportOnly };
+    }
+    return { hours: parseInt(val, 10) || 0, transportOnly: false };
+  };
+
   const incrementHour = (dateKey) => {
-    const current = parseInt(data[dateKey] || 0, 10);
-    const newData = { ...data, [dateKey]: current + 1 };
+    const dayData = getDayData(dateKey);
+    const newDayData = {
+      ...dayData,
+      hours: dayData.hours + 1
+    };
+    const newData = { ...data, [dateKey]: newDayData };
     saveData(newData);
   };
 
   const decrementHour = (dateKey) => {
-    const current = parseInt(data[dateKey] || 0, 10);
+    const dayData = getDayData(dateKey);
+    const newDayData = {
+      ...dayData,
+      hours: Math.max(0, dayData.hours - 1)
+    };
     const newData = { ...data };
-    if (current <= 1) {
+    if (newDayData.hours === 0 && !newDayData.transportOnly) {
       delete newData[dateKey];
     } else {
-      newData[dateKey] = current - 1;
+      newData[dateKey] = newDayData;
+    }
+    saveData(newData);
+  };
+
+  const toggleTransportOnly = (dateKey) => {
+    const dayData = getDayData(dateKey);
+    const newDayData = {
+      ...dayData,
+      transportOnly: !dayData.transportOnly
+    };
+    const newData = { ...data };
+    if (newDayData.hours === 0 && !newDayData.transportOnly) {
+      delete newData[dateKey];
+    } else {
+      newData[dateKey] = newDayData;
     }
     saveData(newData);
   };
@@ -133,8 +165,9 @@ const Timesheet = () => {
       const day = String(date.getDate()).padStart(2, '0');
       const dateKey = `${year}-${month}-${day}`;
 
-      const hours = data[dateKey] || 0;
-      const transport = hours > 0 ? 200 : 0;
+      const dayData = getDayData(dateKey);
+      const hours = dayData.hours;
+      const transport = (hours > 0 || dayData.transportOnly) ? 200 : 0;
       const total = (hours * 700) + transport;
 
       monthData.push({
@@ -185,10 +218,12 @@ const Timesheet = () => {
     const dayStr = String(date.getDate()).padStart(2, '0');
     const dateKey = `${year}-${month}-${dayStr}`;
 
-    const hours = data[dateKey] || '';
-    const numHours = parseInt(hours, 10) || 0;
+    const dayData = getDayData(dateKey);
+    const numHours = dayData.hours;
+    const transportOnly = dayData.transportOnly;
 
-    const transport = numHours > 0 ? 200 : 0;
+    const hasTransport = numHours > 0 || transportOnly;
+    const transport = hasTransport ? 200 : 0;
     const dailyTotal = (numHours * 700) + transport;
 
     totalMonthHours += numHours;
@@ -205,55 +240,73 @@ const Timesheet = () => {
       <div
         key={dateKey}
         data-today={isTodayInThisPeriod ? "true" : "false"}
-        className={`p-4 rounded-xl border ${numHours > 0
+        className={`p-4 rounded-xl border ${hasTransport
             ? 'bg-green-50/60 border-green-200 dark:bg-green-900/20 dark:border-green-800'
             : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
           } ${isTodayInThisPeriod
             ? 'ring-2 ring-indigo-500 dark:ring-indigo-400 shadow-lg'
             : ''
-          } shadow-sm transition-all hover:shadow-md`}
+          } shadow-sm transition-all hover:shadow-md flex flex-col justify-between`}
       >
-        <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
-          <span className="font-bold text-gray-700 dark:text-gray-200 flex items-center space-x-2">
-            <span className="w-auto px-2 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm">{date.getDate()} {monthNameShort}</span>
-            <span className="capitalize">{dayName}</span>
-            {isTodayInThisPeriod && (
-              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-500 text-white">Aujourd'hui</span>
-            )}
-          </span>
-          {dailyTotal > 0 && (
-            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-              {dailyTotal} DH
+        <div>
+          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
+            <span className="font-bold text-gray-700 dark:text-gray-200 flex items-center space-x-2">
+              <span className="w-auto px-2 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm">{date.getDate()} {monthNameShort}</span>
+              <span className="capitalize">{dayName}</span>
+              {isTodayInThisPeriod && (
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-500 text-white">Aujourd'hui</span>
+              )}
             </span>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Heures travaillées</label>
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-lg p-1">
-              <button
-                onClick={() => decrementHour(dateKey)}
-                className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
-              >
-                <MinusIcon className="w-4 h-4" />
-              </button>
-              <span className="text-lg font-bold text-gray-900 dark:text-white w-12 text-center">
-                {numHours}
+            {dailyTotal > 0 && (
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                {dailyTotal} DH
               </span>
-              <button
-                onClick={() => incrementHour(dateKey)}
-                className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
-              >
-                <PlusIcon className="w-4 h-4" />
-              </button>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Heures travaillées</label>
+              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-lg p-1">
+                <button
+                  onClick={() => decrementHour(dateKey)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
+                >
+                  <MinusIcon className="w-4 h-4" />
+                </button>
+                <span className="text-lg font-bold text-gray-900 dark:text-white w-12 text-center">
+                  {numHours}
+                </span>
+                <button
+                  onClick={() => incrementHour(dateKey)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500 dark:text-gray-400">Transport:</span>
+              <span className="font-medium text-gray-700 dark:text-gray-300">{transport} DH</span>
             </div>
           </div>
+        </div>
 
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Transport:</span>
-            <span className="font-medium text-gray-700 dark:text-gray-300">{transport} DH</span>
-          </div>
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50">
+          <button
+            onClick={() => toggleTransportOnly(dateKey)}
+            disabled={numHours > 0}
+            className={`w-full py-1.5 px-2 rounded-lg text-xs font-bold border transition-all ${
+              transportOnly
+                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                : numHours > 0
+                  ? 'bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-800/40 dark:text-gray-600 dark:border-gray-800 cursor-not-allowed'
+                  : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            🚗 {transportOnly ? 'Transport Seul Actif' : 'Ajouter Transport Seul'}
+          </button>
         </div>
       </div>
     );
