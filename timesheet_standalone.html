@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Pointage & Salaire (20 au 20)</title>
+    <title>Pointage & Salaire - Calendrier</title>
     <style>
         :root {
             --bg-color: #f3f4f6;
@@ -18,10 +18,9 @@
             --warning: #f59e0b;
             --danger: #ef4444;
             --danger-hover: #dc2626;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --header-bg: #ffffff;
-            --today-border: #4f46e5;
-            --today-glow: rgba(79, 70, 229, 0.3);
+            --today-bg: #4f46e5;
+            --today-text: white;
+            --weekend-color: #ef4444;
         }
 
         [data-theme="dark"] {
@@ -32,10 +31,9 @@
             --border-color: #374151;
             --primary: #6366f1;
             --primary-hover: #818cf8;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-            --header-bg: #1f2937;
-            --today-border: #818cf8;
-            --today-glow: rgba(99, 102, 241, 0.4);
+            --today-bg: #6366f1;
+            --today-text: white;
+            --weekend-color: #f87171;
         }
 
         * {
@@ -43,36 +41,30 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            padding-bottom: 3rem;
+            padding: 20px;
         }
 
         .container {
-            max-width: 1300px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 0 1rem;
         }
 
-        header {
-            background-color: var(--header-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 1rem;
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
@@ -80,11 +72,10 @@
             font-weight: 700;
         }
 
-        .period-controls {
+        .nav-controls {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         button {
@@ -93,11 +84,31 @@
             border-radius: 0.5rem;
             font-weight: 600;
             font-size: 0.9rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
             padding: 0.5rem 1rem;
             transition: all 0.2s;
+        }
+
+        .btn-icon {
+            background: var(--bg-color);
+            color: var(--text-main);
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .btn-icon:hover {
+            background: var(--border-color);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
         }
 
         .btn-outline {
@@ -110,15 +121,6 @@
             background-color: var(--border-color);
         }
 
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-hover);
-        }
-
         .btn-danger {
             background-color: var(--danger);
             color: white;
@@ -128,194 +130,153 @@
             background-color: var(--danger-hover);
         }
 
-        .btn-success {
-            background-color: var(--success);
-            color: white;
-        }
-
-        .btn-success:hover {
-            background-color: #059669;
-        }
-
-        .btn-icon {
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            width: 40px;
-            height: 40px;
-            font-size: 1.2rem;
-        }
-
-        .btn-icon:hover {
-            background: var(--border-color);
-        }
-
-        .period-title {
-            font-size: 1rem;
-            font-weight: 600;
-            min-width: 260px;
+        .month-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            min-width: 200px;
             text-align: center;
-            background: var(--card-bg);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid var(--border-color);
         }
 
-        .dashboard {
+        .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
-            margin: 2rem 0;
+            margin-bottom: 2rem;
         }
 
         .stat-card {
-            background-color: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 1rem;
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 0.75rem;
             border: 1px solid var(--border-color);
-            box-shadow: var(--card-shadow);
+            text-align: center;
         }
 
-        .stat-title {
-            font-size: 0.875rem;
+        .stat-label {
+            font-size: 0.75rem;
             color: var(--text-muted);
-            margin-bottom: 0.5rem;
-            font-weight: 600;
             text-transform: uppercase;
         }
 
         .stat-value {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             font-weight: 800;
         }
 
-        .stat-subtitle {
+        .calendar {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .weekday {
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 600;
             font-size: 0.8rem;
-            margin-top: 0.25rem;
             color: var(--text-muted);
         }
 
-        .text-primary {
-            color: var(--primary);
-        }
-
-        .text-warning {
-            color: var(--warning);
-        }
-
-        .text-success {
-            color: var(--success);
+        .weekday.sunday {
+            color: var(--weekend-color);
         }
 
         .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(7, 1fr);
         }
 
-        .day-card {
-            background-color: var(--card-bg);
-            border: 2px solid var(--border-color);
-            border-radius: 1rem;
-            padding: 1rem;
-            box-shadow: var(--card-shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+        .day-cell {
+            min-height: 100px;
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem;
+            position: relative;
             transition: all 0.2s;
         }
 
-        .day-card.active {
-            border-color: var(--success);
-            background-color: rgba(16, 185, 129, 0.08);
+        .day-cell:nth-child(7n) {
+            border-right: none;
         }
 
-        .day-card.today-card {
-            border-color: var(--today-border);
-            box-shadow: 0 0 0 3px var(--today-glow), var(--card-shadow);
-            background-color: rgba(99, 102, 241, 0.05);
+        .day-cell.today {
+            background: rgba(79, 70, 229, 0.15);
         }
 
-        .day-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 0.5rem;
+        .day-cell.today .day-number {
+            background: var(--today-bg);
+            color: var(--today-text);
         }
 
-        .day-date {
-            font-weight: 700;
-            font-size: 1rem;
+        .day-number {
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            text-align: center;
+            border-radius: 50%;
         }
 
-        .day-badge {
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-            padding: 0.2rem 0.5rem;
-            border-radius: 1rem;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-
-        .today-badge {
-            background-color: var(--primary);
-            color: white;
-            padding: 0.2rem 0.5rem;
-            border-radius: 1rem;
-            font-size: 0.7rem;
-            font-weight: 700;
-            margin-left: 0.5rem;
-        }
-
-        .hour-controls {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .day-cell.other-month {
             background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            padding: 0.25rem;
+            color: var(--text-muted);
         }
 
-        .hour-controls button {
-            background: var(--card-bg);
-            color: var(--text-main);
-            width: 38px;
-            height: 38px;
+        .hours-input {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .hours-input button {
+            width: 24px;
+            height: 24px;
             padding: 0;
-            border-radius: 0.4rem;
-            font-size: 1.2rem;
-            font-weight: bold;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            font-size: 1rem;
+            background: var(--bg-color);
+            color: var(--text-main);
+            border-radius: 0.25rem;
         }
 
-        .hour-controls button:hover {
-            background: var(--border-color);
-        }
-
-        .hour-value {
-            font-size: 1.3rem;
-            font-weight: 700;
-            width: 45px;
+        .hours-value {
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 30px;
             text-align: center;
         }
 
-        .day-footer {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            color: var(--text-muted);
+        .day-total {
+            font-size: 0.7rem;
+            margin-top: 0.5rem;
+            padding-top: 0.25rem;
             border-top: 1px dashed var(--border-color);
-            padding-top: 0.75rem;
+            color: var(--success);
+            font-weight: 600;
         }
 
-        .actions {
+        .transport-badge {
+            font-size: 0.6rem;
+            color: var(--warning);
+        }
+
+        .footer-actions {
             display: flex;
+            justify-content: flex-end;
             gap: 0.5rem;
-            flex-wrap: wrap;
+            margin-top: 1rem;
         }
 
         .message-toast {
@@ -324,12 +285,11 @@
             right: 20px;
             background: var(--primary);
             color: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
             z-index: 1000;
             animation: slideIn 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         @keyframes slideIn {
@@ -345,74 +305,88 @@
         }
 
         @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                align-items: stretch;
+            .day-cell {
+                min-height: 80px;
+                padding: 0.25rem;
             }
 
-            .period-controls {
-                justify-content: center;
+            .day-number {
+                width: 22px;
+                height: 22px;
+                line-height: 22px;
+                font-size: 0.7rem;
             }
 
-            .actions {
-                justify-content: center;
-                margin-top: 0.5rem;
+            .hours-value {
+                font-size: 0.7rem;
+                min-width: 25px;
             }
 
-            .calendar-grid {
-                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            .hours-input button {
+                width: 20px;
+                height: 20px;
+            }
+
+            .month-title {
+                font-size: 1rem;
             }
         }
     </style>
 </head>
 
 <body>
-
-    <header>
-        <div class="container header-content">
-            <h1>💰 Salaire (20 - 20)</h1>
-
-            <div class="period-controls">
-                <button class="btn-icon" id="prevPeriodBtn">◀</button>
-                <div class="period-title" id="periodTitle">Chargement...</div>
-                <button class="btn-icon" id="nextPeriodBtn">▶</button>
-                <button class="btn-success" id="todayBtn">📅 Aujourd'hui</button>
-            </div>
-
-            <div class="actions">
-                <button class="btn-outline" id="themeToggle">🌙 Sombre</button>
-                <button class="btn-primary" id="exportBtn">📥 Exporter CSV</button>
-                <button class="btn-danger" id="resetBtn">🗑️ Réinitialiser</button>
-            </div>
-        </div>
-    </header>
-
     <div class="container">
-        <div class="dashboard">
-            <div class="stat-card">
-                <div class="stat-title">Heures travaillées</div>
-                <div class="stat-value text-primary"><span id="statHours">0</span> h</div>
-                <div class="stat-subtitle" id="statHoursPay">0 DH (700 DH/h)</div>
+        <div class="header">
+            <h1>💰 Pointage (20 → 20)</h1>
+            <div class="nav-controls">
+                <button class="btn-icon" id="prevMonthBtn">◀</button>
+                <div class="month-title" id="monthTitle">Mai 2026</div>
+                <button class="btn-icon" id="nextMonthBtn">▶</button>
+                <button class="btn-primary" id="todayBtn">📅 Aujourd'hui</button>
             </div>
-            <div class="stat-card">
-                <div class="stat-title">Jours travaillés</div>
-                <div class="stat-value"><span id="statDays">0</span> <span style="font-size: 1rem;">jrs</span></div>
-                <div class="stat-subtitle">Jours avec heures > 0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Frais de Transport</div>
-                <div class="stat-value text-warning"><span id="statTransport">0</span> DH</div>
-                <div class="stat-subtitle">200 DH / jour travaillé</div>
-            </div>
-            <div class="stat-card" style="background: var(--primary); color: white; border: none;">
-                <div class="stat-title" style="color: rgba(255,255,255,0.8);">Total Net à Payer</div>
-                <div class="stat-value"><span id="statTotal">0</span> DH</div>
-                <div class="stat-subtitle" style="color: rgba(255,255,255,0.8);">Heures + Transport</div>
+            <div>
+                <button class="btn-outline" id="themeToggle">🌙 Sombre</button>
+                <button class="btn-outline" id="exportBtn">📥 CSV</button>
+                <button class="btn-danger" id="resetBtn">🗑️ Reset</button>
             </div>
         </div>
 
-        <div class="calendar-grid" id="calendarGrid">
-            <!-- Days will be generated here -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Heures</div>
+                <div class="stat-value" id="statHours">0</div>
+                <div class="stat-label">(700 DH/h)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Jours travaillés</div>
+                <div class="stat-value" id="statDays">0</div>
+                <div class="stat-label">200 DH/jour</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Transport</div>
+                <div class="stat-value" id="statTransport">0 DH</div>
+            </div>
+            <div class="stat-card" style="background: var(--primary); color: white;">
+                <div class="stat-label">Total</div>
+                <div class="stat-value" id="statTotal">0 DH</div>
+            </div>
+        </div>
+
+        <div class="calendar">
+            <div class="weekdays">
+                <div class="weekday sunday">DIM</div>
+                <div class="weekday">LUN</div>
+                <div class="weekday">MAR</div>
+                <div class="weekday">MER</div>
+                <div class="weekday">JEU</div>
+                <div class="weekday">VEN</div>
+                <div class="weekday">SAM</div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="footer-actions">
+            <small>💰 700 DH/heure + 200 DH transport par jour travaillé</small>
         </div>
     </div>
 
@@ -420,143 +394,167 @@
         const HOURLY_RATE = 700;
         const DAILY_TRANSPORT = 200;
 
-        let currentPeriodStart = new Date();
-        let timesheetData = JSON.parse(localStorage.getItem('timesheet_20_19_data')) || {};
+        let currentDate = new Date();
+        let timesheetData = JSON.parse(localStorage.getItem('timesheet_period_data')) || {};
 
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
-        const dayShort = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
         function showMessage(message, isError = false) {
-            const existingToast = document.querySelector('.message-toast');
-            if (existingToast) existingToast.remove();
-
+            const existing = document.querySelector('.message-toast');
+            if (existing) existing.remove();
             const toast = document.createElement('div');
             toast.className = 'message-toast';
             toast.style.backgroundColor = isError ? 'var(--danger)' : 'var(--success)';
             toast.innerText = message;
             document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
+            setTimeout(() => toast.remove(), 3000);
         }
 
-        function getPeriodStartForDate(date) {
-            let year = date.getFullYear();
-            let month = date.getMonth();
+        function formatDateKey(year, month, day) {
+            return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
 
-            if (date.getDate() < 20) {
+        function isInPeriod(date) {
+            const day = date.getDate();
+            const month = date.getMonth();
+            const year = date.getFullYear();
+
+            let periodStartMonth = month;
+            let periodStartYear = year;
+            if (day < 20) {
+                periodStartMonth = month - 1;
+                if (periodStartMonth < 0) {
+                    periodStartMonth = 11;
+                    periodStartYear = year - 1;
+                }
+            }
+
+            const periodStart = new Date(periodStartYear, periodStartMonth, 20);
+            const periodEnd = new Date(periodStartYear, periodStartMonth + 1, 20);
+
+            return date >= periodStart && date <= periodEnd;
+        }
+
+        function updateHour(dateKey, delta) {
+            const current = timesheetData[dateKey] || 0;
+            let newVal = current + delta;
+            if (newVal <= 0) {
+                delete timesheetData[dateKey];
+            } else {
+                timesheetData[dateKey] = newVal;
+            }
+            localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
+            renderCalendar();
+        }
+
+        function initPeriod() {
+            const now = new Date();
+            let year = now.getFullYear();
+            let month = now.getMonth();
+            
+            // If we are before the 20th, the period started the previous month
+            if (now.getDate() < 20) {
                 month -= 1;
                 if (month < 0) {
                     month = 11;
                     year -= 1;
                 }
             }
-            return new Date(year, month, 20);
+            currentDate = new Date(year, month, 20);
+            renderCalendar();
         }
 
-        function getCurrentPeriodStart() {
-            return getPeriodStartForDate(new Date());
-        }
-
-        function changePeriod(offset) {
-            let year = currentPeriodStart.getFullYear();
-            let month = currentPeriodStart.getMonth() + offset;
-
-            if (month > 11) { month = 0; year += 1; }
-            if (month < 0) { month = 11; year -= 1; }
-
-            currentPeriodStart = new Date(year, month, 20);
-            render();
-        }
-
-        function getPeriodEnd() {
-            let year = currentPeriodStart.getFullYear();
-            let month = currentPeriodStart.getMonth() + 1;
-
-            if (month > 11) { month = 0; year += 1; }
-
-            return new Date(year, month, 20);
-        }
-
-        function getDaysInPeriod() {
-            const start = currentPeriodStart;
-            const end = getPeriodEnd();
-            const days = [];
-
-            let current = new Date(start);
-            while (current <= end) {
-                days.push(new Date(current));
-                current.setDate(current.getDate() + 1);
+        // FONCTION SIMPLE ET CLAIRE
+        function goToToday() {
+            const today = new Date();
+            let year = today.getFullYear();
+            let month = today.getMonth();
+            if (today.getDate() < 20) {
+                month--;
+                if (month < 0) {
+                    month = 11;
+                    year--;
+                }
             }
-            return days;
+            currentDate = new Date(year, month, 20);
+            renderCalendar();
+
+            // Attendre que le DOM soit prêt, puis scroller vers la cellule du jour
+            setTimeout(() => {
+                const todayCells = document.querySelectorAll('.day-cell.today');
+                if (todayCells.length > 0) {
+                    const todayCell = todayCells[0];
+                    todayCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Effet visuel temporaire
+                    todayCell.style.transition = 'all 0.3s';
+                    todayCell.style.transform = 'scale(1.02)';
+                    todayCell.style.boxShadow = '0 0 0 3px var(--primary)';
+                    setTimeout(() => {
+                        todayCell.style.transform = '';
+                        todayCell.style.boxShadow = '';
+                    }, 600);
+
+                    showMessage(`📅 ${monthNames[today.getMonth()]} ${today.getFullYear()} - Jour ${today.getDate()}`);
+                } else {
+                    showMessage("📅 Calendrier mis à jour", false);
+                }
+            }, 200);
         }
 
-        function formatDateKey(date) {
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        function formatDisplayDate(date) {
-            return `${dayShort[date.getDay()]} ${date.getDate()} ${monthNames[date.getMonth()]}`;
-        }
-
-        function updateHour(dateKey, delta) {
-            const currentHours = timesheetData[dateKey] || 0;
-            let newHours = currentHours + delta;
-
-            if (newHours <= 0) {
-                delete timesheetData[dateKey];
-            } else {
-                timesheetData[dateKey] = newHours;
-            }
-
-            localStorage.setItem('timesheet_20_19_data', JSON.stringify(timesheetData));
-            render();
+        function changeMonth(offset) {
+            currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 20);
+            renderCalendar();
         }
 
         function resetPeriod() {
-            if (confirm('Êtes-vous sûr de vouloir supprimer toutes les heures de cette période ?')) {
-                const days = getDaysInPeriod();
-                days.forEach(date => {
-                    const dateKey = formatDateKey(date);
-                    delete timesheetData[dateKey];
-                });
-                localStorage.setItem('timesheet_20_19_data', JSON.stringify(timesheetData));
-                render();
+            if (confirm('Supprimer toutes les heures de la période en cours ?')) {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const nextMonth = (month + 1) % 12;
+                const nextYear = month === 11 ? year + 1 : year;
+                const periodStart = new Date(year, month, 20);
+                const periodEnd = new Date(nextYear, nextMonth, 20);
+
+                for (let key in timesheetData) {
+                    const [y, m, d] = key.split('-').map(Number);
+                    const date = new Date(y, m - 1, d);
+                    if (date >= periodStart && date <= periodEnd) {
+                        delete timesheetData[key];
+                    }
+                }
+                localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
+                renderCalendar();
                 showMessage("✅ Période réinitialisée");
             }
         }
 
         function exportCSV() {
-            const days = getDaysInPeriod();
-            const start = currentPeriodStart;
-            const end = getPeriodEnd();
-            const title = `${start.getDate()}_${monthNames[start.getMonth()]}_au_${end.getDate()}_${monthNames[end.getMonth()]}_${end.getFullYear()}`;
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const nextMonth = (month + 1) % 12;
+            const nextYear = month === 11 ? year + 1 : year;
+            const periodStart = new Date(year, month, 20);
+            const periodEnd = new Date(nextYear, nextMonth, 20);
 
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Date,Heures,Paye Heures (DH),Transport (DH),Total Jour (DH)\n";
-
-            days.forEach(date => {
-                const dateKey = formatDateKey(date);
-                const hours = timesheetData[dateKey] || 0;
+            let csv = "Date,Heures,Total Heures (DH),Transport (DH),Total Jour (DH)\n";
+            let current = new Date(periodStart);
+            while (current <= periodEnd) {
+                const key = formatDateKey(current.getFullYear(), current.getMonth(), current.getDate());
+                const hours = timesheetData[key] || 0;
                 const hoursPay = hours * HOURLY_RATE;
                 const transport = hours > 0 ? DAILY_TRANSPORT : 0;
                 const total = hoursPay + transport;
+                csv += `${key},${hours},${hoursPay},${transport},${total}\n`;
+                current.setDate(current.getDate() + 1);
+            }
 
-                csvContent += `${formatDateKey(date)},${hours},${hoursPay},${transport},${total}\n`;
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Salaire_${title}.csv`);
-            document.body.appendChild(link);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `pointage_${monthNames[month]}_${year}.csv`;
             link.click();
-            document.body.removeChild(link);
-
+            URL.revokeObjectURL(link.href);
             showMessage("📥 Export CSV terminé");
         }
 
@@ -566,178 +564,113 @@
             if (html.getAttribute('data-theme') === 'light') {
                 html.setAttribute('data-theme', 'dark');
                 btn.innerHTML = '☀️ Clair';
-                localStorage.setItem('timesheet_theme', 'dark');
+                localStorage.setItem('theme', 'dark');
             } else {
                 html.setAttribute('data-theme', 'light');
                 btn.innerHTML = '🌙 Sombre';
-                localStorage.setItem('timesheet_theme', 'light');
+                localStorage.setItem('theme', 'light');
             }
         }
 
-        function scrollToToday() {
-            console.log("scrollToToday called");
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
 
-            // STEP 1: Force switch to the period that contains today
-            const newPeriodStart = getCurrentPeriodStart();
-            const needsPeriodSwitch = newPeriodStart.getTime() !== currentPeriodStart.getTime();
+            const nextMonth = (month + 1) % 12;
+            const nextYear = month === 11 ? year + 1 : year;
+            
+            document.getElementById('monthTitle').innerHTML = `${monthNames[month]} - ${monthNames[nextMonth]} ${year}`;
 
-            if (needsPeriodSwitch) {
-                console.log("Switching period to current period");
-                currentPeriodStart = newPeriodStart;
-                render();
-                showMessage("📅 Passage à la période actuelle...");
+            const periodStart = new Date(year, month, 20);
+            const periodEnd = new Date(nextYear, nextMonth, 20);
 
-                // After render, find and scroll to today
-                setTimeout(() => {
-                    findAndScrollToTodayCard();
-                }, 500);
-            } else {
-                // Already in correct period, just scroll
-                findAndScrollToTodayCard();
-            }
-        }
-
-        function findAndScrollToTodayCard() {
-            console.log("Finding today card...");
-
-            const todayDate = new Date();
-            const todayKey = formatDateKey(todayDate);
-
-            // Find card by data-date attribute
-            const allCards = document.querySelectorAll('.day-card');
-            let todayCard = null;
-
-            for (let card of allCards) {
-                if (card.getAttribute('data-date') === todayKey) {
-                    todayCard = card;
-                    break;
-                }
+            const days = [];
+            let curr = new Date(periodStart);
+            while (curr <= periodEnd) {
+                days.push(new Date(curr));
+                curr.setDate(curr.getDate() + 1);
             }
 
-            if (todayCard) {
-                console.log("Today card found, scrolling...");
-                todayCard.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                    inline: 'center'
-                });
-
-                // Add temporary highlight effect
-                const originalBorder = todayCard.style.border;
-                const originalTransform = todayCard.style.transform;
-                todayCard.style.transition = 'all 0.3s';
-                todayCard.style.transform = 'scale(1.02)';
-                todayCard.style.border = '4px solid var(--primary)';
-                todayCard.style.boxShadow = '0 0 0 4px var(--today-glow)';
-
-                setTimeout(() => {
-                    todayCard.style.transform = originalTransform;
-                    todayCard.style.border = originalBorder;
-                    todayCard.style.boxShadow = '';
-                }, 800);
-
-                showMessage("📅 Aujourd'hui: " + formatDisplayDate(todayDate));
-            } else {
-                console.log("Today card not found in DOM");
-                showMessage("⚠️ Aujourd'hui non trouvé dans le calendrier", true);
-            }
-        }
-
-        function render() {
-            const end = getPeriodEnd();
-            document.getElementById('periodTitle').innerText =
-                `${currentPeriodStart.getDate()} ${monthNames[currentPeriodStart.getMonth()]} ${currentPeriodStart.getFullYear()} - ${end.getDate()} ${monthNames[end.getMonth()]} ${end.getFullYear()}`;
-
-            const days = getDaysInPeriod();
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
 
-            let totalHours = 0;
-            let workedDays = 0;
+            let totalHoursPeriod = 0;
+            let workedDaysPeriod = 0;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const todayKey = formatDateKey(today);
+
+            const startDayOfWeek = periodStart.getDay();
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'day-cell other-month';
+                cell.innerHTML = `<div class="day-number"></div>`;
+                grid.appendChild(cell);
+            }
 
             days.forEach(date => {
-                const dateKey = formatDateKey(date);
+                const cellYear = date.getFullYear();
+                const cellMonth = date.getMonth();
+                const dayNumber = date.getDate();
+                const dateKey = formatDateKey(cellYear, cellMonth, dayNumber);
                 const hours = timesheetData[dateKey] || 0;
-                const isToday = (dateKey === todayKey);
 
-                if (hours > 0) {
-                    totalHours += hours;
-                    workedDays += 1;
-                }
+                totalHoursPeriod += hours;
+                if (hours > 0) workedDaysPeriod++;
+
+                const isToday = (cellYear === today.getFullYear() && cellMonth === today.getMonth() && dayNumber === today.getDate());
 
                 const transport = hours > 0 ? DAILY_TRANSPORT : 0;
                 const dailyTotal = (hours * HOURLY_RATE) + transport;
 
-                const card = document.createElement('div');
-                let className = 'day-card';
-                if (hours > 0) className += ' active';
-                if (isToday) className += ' today-card';
-                card.className = className;
-                card.setAttribute('data-date', dateKey);
+                const cell = document.createElement('div');
+                cell.className = `day-cell ${isToday ? 'today' : ''} ${hours > 0 ? 'active' : ''}`;
+                if (hours > 0) {
+                    cell.style.backgroundColor = 'rgba(16, 185, 129, 0.08)';
+                    cell.style.borderColor = 'var(--success)';
+                }
 
-                card.innerHTML = `
-                    <div class="day-header">
-                        <span class="day-date ${isToday ? 'text-primary' : ''}">
-                            ${formatDisplayDate(date)}
-                            ${isToday ? '<span class="today-badge">Aujourd\'hui</span>' : ''}
-                        </span>
-                        ${dailyTotal > 0 ? `<span class="day-badge">+${dailyTotal} DH</span>` : ''}
+                cell.innerHTML = `
+                    <div class="day-number">${dayNumber}</div>
+                    <div class="hours-input">
+                        <button onclick="updateHour('${dateKey}', -1)">-</button>
+                        <span class="hours-value">${hours}</span>
+                        <button onclick="updateHour('${dateKey}', 1)">+</button>
                     </div>
-                    
-                    <div>
-                        <div class="hour-controls">
-                            <button onclick="updateHour('${dateKey}', -1)">-</button>
-                            <span class="hour-value">${hours}</span>
-                            <button onclick="updateHour('${dateKey}', 1)">+</button>
+                    ${hours > 0 ? `
+                        <div class="day-total">
+                            ${dailyTotal} DH
+                            <div class="transport-badge">+${transport} DH transport</div>
                         </div>
-                    </div>
-
-                    <div class="day-footer">
-                        <span>💰 Heures: ${hours * HOURLY_RATE} DH</span>
-                        <span>🚗 Transport: ${transport} DH</span>
-                    </div>
+                    ` : ''}
                 `;
 
-                grid.appendChild(card);
+                grid.appendChild(cell);
             });
 
-            // Update stats
-            const totalHoursPay = totalHours * HOURLY_RATE;
-            const totalTransport = workedDays * DAILY_TRANSPORT;
+            const totalHoursPay = totalHoursPeriod * HOURLY_RATE;
+            const totalTransport = workedDaysPeriod * DAILY_TRANSPORT;
             const grandTotal = totalHoursPay + totalTransport;
 
-            document.getElementById('statHours').innerText = totalHours;
-            document.getElementById('statHoursPay').innerText = `${totalHoursPay.toLocaleString('fr-FR')} DH (700 DH/h)`;
-            document.getElementById('statDays').innerText = workedDays;
-            document.getElementById('statTransport').innerText = totalTransport.toLocaleString('fr-FR');
-            document.getElementById('statTotal').innerText = grandTotal.toLocaleString('fr-FR');
+            document.getElementById('statHours').innerText = totalHoursPeriod;
+            document.getElementById('statDays').innerText = workedDaysPeriod;
+            document.getElementById('statTransport').innerText = totalTransport.toLocaleString('fr-FR') + ' DH';
+            document.getElementById('statTotal').innerText = grandTotal.toLocaleString('fr-FR') + ' DH';
         }
 
-        // Set up event listeners
-        function setupEventListeners() {
-            document.getElementById('prevPeriodBtn').addEventListener('click', () => changePeriod(-1));
-            document.getElementById('nextPeriodBtn').addEventListener('click', () => changePeriod(1));
-            document.getElementById('todayBtn').addEventListener('click', () => scrollToToday());
-            document.getElementById('themeToggle').addEventListener('click', () => toggleTheme());
-            document.getElementById('exportBtn').addEventListener('click', () => exportCSV());
-            document.getElementById('resetBtn').addEventListener('click', () => resetPeriod());
-        }
+        document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
+        document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
+        document.getElementById('todayBtn').addEventListener('click', () => goToToday());
+        document.getElementById('resetBtn').addEventListener('click', () => resetPeriod());
+        document.getElementById('exportBtn').addEventListener('click', () => exportCSV());
+        document.getElementById('themeToggle').addEventListener('click', () => toggleTheme());
 
-        // Init theme
-        const savedTheme = localStorage.getItem('timesheet_theme');
+        const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'dark');
-            const themeBtn = document.getElementById('themeToggle');
-            if (themeBtn) themeBtn.innerHTML = '☀️ Clair';
+            document.getElementById('themeToggle').innerHTML = '☀️ Clair';
         }
 
-        // Start the app
-        setupEventListeners();
-        currentPeriodStart = getCurrentPeriodStart();
-        render();
+        initPeriod();
     </script>
 </body>
 

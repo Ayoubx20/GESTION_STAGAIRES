@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ArrowDownTrayIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/outline';
-import { useLanguage } from '../contexts/LanguageContext';
 
 const Timesheet = () => {
-  const { t } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [data, setData] = useState({});
 
@@ -23,12 +21,37 @@ const Timesheet = () => {
     localStorage.setItem('timesheet_data', JSON.stringify(newData));
   };
 
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth();
+  // Get the period that contains a specific date
+  const getPeriodForDate = useCallback((date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
 
+    let periodYear = year;
+    let periodMonth = month;
+
+    if (day < 20) {
+      periodMonth = month - 1;
+      if (periodMonth < 0) {
+        periodMonth = 11;
+        periodYear = year - 1;
+      }
+    }
+
+    return new Date(periodYear, periodMonth, 20);
+  }, []);
+
+  // Get today's period start
+  const getTodayPeriodStart = useCallback(() => {
+    return getPeriodForDate(new Date());
+  }, [getPeriodForDate]);
+
+  // Get days in the current period
   const getDaysInPeriod = useCallback(() => {
-    const start = new Date(currentYear, currentMonth, 20);
-    const end = new Date(currentYear, currentMonth + 1, 20);
+    const startYear = currentDate.getFullYear();
+    const startMonth = currentDate.getMonth();
+    const start = new Date(startYear, startMonth, 20);
+    const end = new Date(startYear, startMonth + 1, 20);
     const days = [];
     let current = new Date(start);
     while (current <= end) {
@@ -36,60 +59,39 @@ const Timesheet = () => {
       current.setDate(current.getDate() + 1);
     }
     return days;
-  }, [currentYear, currentMonth]);
+  }, [currentDate]);
 
   const periodDays = getDaysInPeriod();
   const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-  const isTodayInPeriod = useCallback(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const start = new Date(currentYear, currentMonth, 20);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(currentYear, currentMonth + 1, 20);
-    end.setHours(0, 0, 0, 0);
-    return today >= start && today <= end;
-  }, [currentYear, currentMonth]);
-
-  const scrollToToday = useCallback(() => {
-    const todayCard = document.querySelector('[data-today="true"]');
-
-    if (todayCard && isTodayInPeriod()) {
-      todayCard.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'center'
-      });
-
-      // Temporary highlight effect
-      todayCard.style.transition = 'all 0.3s';
-      todayCard.style.transform = 'scale(1.02)';
-      todayCard.style.boxShadow = '0 0 0 3px #4f46e5, 0 10px 25px -5px rgba(0,0,0,0.2)';
-
-      setTimeout(() => {
-        todayCard.style.transform = 'scale(1)';
-        todayCard.style.boxShadow = '';
-      }, 600);
-    } else if (!isTodayInPeriod()) {
-      alert("La date d'aujourd'hui n'est pas dans la période affichée.");
-    }
-  }, [isTodayInPeriod]);
-
-  // Auto-scroll when period changes
-  useEffect(() => {
+  // Go to today - ALWAYS switches to the correct period
+  const goToToday = useCallback(() => {
+    const todayPeriodStart = getTodayPeriodStart();
+    setCurrentDate(todayPeriodStart);
+    // Small delay to ensure render then scroll
     setTimeout(() => {
-      if (isTodayInPeriod()) {
-        scrollToToday();
+      const todayCard = document.querySelector('[data-today="true"]');
+      if (todayCard) {
+        todayCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        todayCard.style.transition = 'all 0.3s';
+        todayCard.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+          todayCard.style.transform = '';
+        }, 500);
       }
     }, 200);
-  }, [currentDate, data, isTodayInPeriod, scrollToToday]);
+  }, [getTodayPeriodStart]);
 
   const handlePrevMonth = () => {
-    setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() - 1;
+    setCurrentDate(new Date(year, month, 20));
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    setCurrentDate(new Date(year, month, 20));
   };
 
   const handleResetMonth = () => {
@@ -152,7 +154,7 @@ const Timesheet = () => {
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `timesheet_${currentYear}_${currentMonth + 1}.csv`);
+      link.setAttribute("download", `timesheet_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -160,7 +162,7 @@ const Timesheet = () => {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(monthData, null, 2));
       const link = document.createElement("a");
       link.setAttribute("href", dataStr);
-      link.setAttribute("download", `timesheet_${currentYear}_${currentMonth + 1}.json`);
+      link.setAttribute("download", `timesheet_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}.json`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -170,8 +172,11 @@ const Timesheet = () => {
   let totalMonthHours = 0;
   let totalTransport = 0;
   let grandTotal = 0;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const todayPeriodStart = getTodayPeriodStart();
+  const isCurrentPeriodTodayPeriod = currentDate.getTime() === todayPeriodStart.getTime();
 
   const daysRender = [];
   periodDays.forEach((date) => {
@@ -194,16 +199,16 @@ const Timesheet = () => {
     const monthNameShort = date.toLocaleDateString('fr-FR', { month: 'short' });
 
     const isToday = date.toDateString() === today.toDateString();
-    const isTodayInCurrentPeriod = isTodayInPeriod();
+    const isTodayInThisPeriod = isToday && isCurrentPeriodTodayPeriod;
 
     daysRender.push(
       <div
         key={dateKey}
-        data-today={isToday && isTodayInCurrentPeriod ? "true" : "false"}
+        data-today={isTodayInThisPeriod ? "true" : "false"}
         className={`p-4 rounded-xl border ${numHours > 0
             ? 'bg-green-50/60 border-green-200 dark:bg-green-900/20 dark:border-green-800'
             : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
-          } ${isToday && isTodayInCurrentPeriod
+          } ${isTodayInThisPeriod
             ? 'ring-2 ring-indigo-500 dark:ring-indigo-400 shadow-lg'
             : ''
           } shadow-sm transition-all hover:shadow-md`}
@@ -212,7 +217,7 @@ const Timesheet = () => {
           <span className="font-bold text-gray-700 dark:text-gray-200 flex items-center space-x-2">
             <span className="w-auto px-2 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm">{date.getDate()} {monthNameShort}</span>
             <span className="capitalize">{dayName}</span>
-            {isToday && isTodayInCurrentPeriod && (
+            {isTodayInThisPeriod && (
               <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-500 text-white">Aujourd'hui</span>
             )}
           </span>
@@ -254,6 +259,12 @@ const Timesheet = () => {
     );
   });
 
+  // Format period display
+  const startMonth = monthNames[currentDate.getMonth()];
+  const endMonth = monthNames[(currentDate.getMonth() + 1) % 12];
+  const startYear = currentDate.getFullYear();
+  const endYear = currentDate.getMonth() === 11 ? startYear + 1 : startYear;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -280,26 +291,8 @@ const Timesheet = () => {
             <ChevronLeftIcon className="w-5 h-5" />
           </button>
 
-          <div className="flex space-x-2">
-            <select
-              value={currentMonth}
-              onChange={(e) => setCurrentDate(new Date(currentYear, parseInt(e.target.value), 1))}
-              className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 outline-none font-semibold"
-            >
-              {monthNames.map((m, idx) => (
-                <option key={idx} value={idx}>{m}</option>
-              ))}
-            </select>
-
-            <select
-              value={currentYear}
-              onChange={(e) => setCurrentDate(new Date(parseInt(e.target.value), currentMonth, 1))}
-              className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 outline-none font-semibold"
-            >
-              {Array.from({ length: 10 }, (_, i) => currentYear - 5 + i).map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+          <div className="text-lg font-bold text-gray-900 dark:text-white min-w-[200px] text-center">
+            {startMonth} {startYear} → {endMonth} {endYear}
           </div>
 
           <button onClick={handleNextMonth} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm transition-all border border-gray-200 dark:border-gray-600">
@@ -309,7 +302,7 @@ const Timesheet = () => {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={scrollToToday}
+            onClick={goToToday}
             className="inline-flex items-center px-4 py-2 border border-green-200 text-green-700 dark:border-green-800/30 dark:text-green-400 bg-green-50 dark:bg-green-900/10 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-xl text-sm font-semibold transition-colors"
           >
             📅 Aujourd'hui
@@ -326,7 +319,7 @@ const Timesheet = () => {
           <div className="relative z-10">
             <p className="text-indigo-100 text-sm font-medium mb-1">Total Heures Travaillées</p>
             <p className="text-3xl font-black">{totalMonthHours} <span className="text-lg font-medium opacity-80">h</span></p>
-            <p className="text-indigo-100 text-sm mt-2">Soit {totalMonthHours * 700} DH</p>
+            <p className="text-indigo-100 text-sm mt-2">Soit {(totalMonthHours * 700).toLocaleString('fr-FR')} DH</p>
           </div>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
         </div>
@@ -334,7 +327,7 @@ const Timesheet = () => {
         <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 text-white shadow-lg shadow-amber-200 dark:shadow-none relative overflow-hidden">
           <div className="relative z-10">
             <p className="text-amber-100 text-sm font-medium mb-1">Frais de Transport</p>
-            <p className="text-3xl font-black">{totalTransport} <span className="text-lg font-medium opacity-80">DH</span></p>
+            <p className="text-3xl font-black">{totalTransport.toLocaleString('fr-FR')} <span className="text-lg font-medium opacity-80">DH</span></p>
             <p className="text-amber-100 text-sm mt-2">{totalTransport / 200} jours travaillés</p>
           </div>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
@@ -343,7 +336,7 @@ const Timesheet = () => {
         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-200 dark:shadow-none relative overflow-hidden">
           <div className="relative z-10">
             <p className="text-emerald-100 text-sm font-medium mb-1">Total Général Mensuel</p>
-            <p className="text-4xl font-black">{grandTotal} <span className="text-xl font-medium opacity-80">DH</span></p>
+            <p className="text-4xl font-black">{grandTotal.toLocaleString('fr-FR')} <span className="text-xl font-medium opacity-80">DH</span></p>
           </div>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
         </div>

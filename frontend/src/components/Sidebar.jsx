@@ -31,22 +31,22 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
 
   // Navigation pour ADMIN et SUPERVISEUR
   const adminSupervisorNavigation = [
+    { name: 'Pointage', to: '/timesheet', icon: ClockIcon },
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
     { name: t('interns'), to: '/interns', icon: UsersIcon },
     { name: 'Équipes', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Rapports', to: '/reports', icon: ChartBarIcon },
-    { name: 'Pointage', to: '/timesheet', icon: ClockIcon },
     { name: 'Test Informatique', to: '/quiz', icon: AcademicCapIcon },
   ];
 
   // Navigation pour STAGIAIRE
   const internNavigation = [
+    { name: 'Pointage', to: '/timesheet', icon: ClockIcon },
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
     { name: 'Mon Équipe', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Mes Documents', to: '/my-documents', icon: DocumentTextIcon },
-    { name: 'Pointage', to: '/timesheet', icon: ClockIcon },
     { name: 'Test Informatique', to: '/quiz', icon: AcademicCapIcon },
   ];
 

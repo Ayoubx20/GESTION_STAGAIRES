@@ -94,7 +94,7 @@ function App() {
                 </ProtectedRoute>
               }>
                 {/* Redirection par défaut */}
-                <Route index element={<Navigate to="/dashboard" replace />} />
+                <Route index element={<Navigate to="/timesheet" replace />} />
 
                 {/* Dashboard - accessible à tous */}
                 <Route path="dashboard" element={<Dashboard />} />
