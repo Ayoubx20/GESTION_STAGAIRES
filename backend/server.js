@@ -164,6 +164,7 @@ try {
     app.use('/api/evaluations', require('./routes/evaluations'));
     app.use('/api/settings', require('./routes/settings'));
     app.use('/api/teams', require('./routes/teams'));
+    app.use('/api/timesheet', require('./routes/timesheet'));
     
     // Pour l'upload de CV/Documents
     app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

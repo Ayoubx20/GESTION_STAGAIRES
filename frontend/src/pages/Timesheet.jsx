@@ -1,25 +1,114 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ArrowDownTrayIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 const Timesheet = () => {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [data, setData] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const savedData = localStorage.getItem('timesheet_data');
-    if (savedData) {
-      try {
-        setData(JSON.parse(savedData));
-      } catch (e) {
-        console.error('Error parsing timesheet data', e);
+  // Unique key for storage per user (retained for migration check)
+  const storageKey = user?._id ? `timesheet_data_${user._id}` : 'timesheet_data';
+
+  const fetchTimesheet = useCallback(async (isSilent = false) => {
+    if (!user) return;
+    if (!isSilent) setLoading(true);
+    try {
+      const response = await api.get('/timesheet');
+      if (response.success && response.data) {
+        // Deep compare stringified objects to prevent re-renders unless data actually changed
+        setData(prevData => {
+          if (JSON.stringify(prevData) !== JSON.stringify(response.data)) {
+            return response.data;
+          }
+          return prevData;
+        });
       }
+    } catch (e) {
+      console.error('Error fetching timesheet from MongoDB', e);
+      if (!isSilent) toast.error('Erreur lors du chargement de la feuille de temps');
+    } finally {
+      if (!isSilent) setLoading(false);
     }
-  }, []);
+  }, [user]);
 
-  const saveData = (newData) => {
+  // Initial fetch and optional localStorage migration
+  useEffect(() => {
+    const initialLoad = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const response = await api.get('/timesheet');
+        if (response.success && response.data && Object.keys(response.data).length > 0) {
+          setData(response.data);
+        } else {
+          // Check for existing local storage data to migrate to MongoDB
+          const localDataStr = localStorage.getItem(storageKey);
+          if (localDataStr) {
+            try {
+              const localData = JSON.parse(localDataStr);
+              if (Object.keys(localData).length > 0) {
+                setData(localData);
+                // Save it to MongoDB
+                await api.post('/timesheet', { days: localData });
+                toast.success('Données locales synchronisées sur le serveur !');
+              }
+            } catch (err) {
+              console.error('Error parsing local timesheet during migration', err);
+            }
+            // Clean up local storage
+            localStorage.removeItem(storageKey);
+          } else {
+            setData({});
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching timesheet from MongoDB', e);
+        toast.error('Erreur lors du chargement de la feuille de temps');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initialLoad();
+  }, [user, storageKey]);
+
+  // Real-time synchronization listeners (Focus & Periodic polling)
+  useEffect(() => {
+    if (!user) return;
+
+    // 1. Sync instantly when switching tabs / focusing window
+    const handleFocus = () => {
+      fetchTimesheet(true); // Silent sync in the background
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    // 2. Periodic sync every 5 seconds (fast real-time polling)
+    const interval = setInterval(() => {
+      fetchTimesheet(true); // Silent sync in the background
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [user, fetchTimesheet]);
+
+  const saveData = async (newData) => {
+    // Optimistic update
     setData(newData);
-    localStorage.setItem('timesheet_data', JSON.stringify(newData));
+    try {
+      await api.post('/timesheet', { days: newData });
+    } catch (e) {
+      console.error('Error saving timesheet to MongoDB', e);
+      toast.error('Erreur lors de la sauvegarde sur le serveur');
+    }
   };
+
 
   // Get the period that contains a specific date
   const getPeriodForDate = useCallback((date) => {
@@ -311,6 +400,47 @@ const Timesheet = () => {
       </div>
     );
   });
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            <div className="h-4 w-64 bg-gray-100 dark:bg-gray-800 rounded-lg"></div>
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            <div className="h-10 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+          </div>
+        </div>
+
+        {/* Date Selector Skeleton */}
+        <div className="h-20 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>
+
+        {/* Info Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="h-32 bg-gray-250 dark:bg-gray-700 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/20"></div>
+          <div className="h-32 bg-gray-250 dark:bg-gray-700 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20"></div>
+          <div className="h-32 bg-gray-250 dark:bg-gray-700 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-600/20"></div>
+        </div>
+
+        {/* Days Grid Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-3 h-48 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
+                <div className="h-10 w-full bg-gray-100 dark:bg-gray-700/50 rounded-md"></div>
+              </div>
+              <div className="h-8 w-full bg-gray-100 dark:bg-gray-700/50 rounded-md"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // Format period display
   const startMonth = monthNames[currentDate.getMonth()];

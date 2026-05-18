@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
@@ -16,6 +17,7 @@ import { questionsData } from '../data/quizData';
 
 const Quiz = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [selectedLevel, setSelectedLevel] = useState(null); // null, 1, 2, or 3
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -26,6 +28,9 @@ const Quiz = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [apiQuestions, setApiQuestions] = useState([]);
+
+  // Unique storage key for quiz progress
+  const storageKey = user?._id ? `quizProgress_${user._id}` : 'quizProgress';
 
   // Get questions for the current level or API
   const questions = useMemo(() => {
@@ -80,7 +85,7 @@ const Quiz = () => {
 
   // Load saved progress
   useEffect(() => {
-    const savedProgress = localStorage.getItem('quizProgress');
+    const savedProgress = localStorage.getItem(storageKey);
     if (savedProgress && !showResults) {
       try {
         const data = JSON.parse(savedProgress);
@@ -96,13 +101,20 @@ const Quiz = () => {
       } catch (e) {
         console.error("Failed to parse quiz progress", e);
       }
+    } else {
+      setSelectedLevel(null);
+      setCurrentQuestionIndex(0);
+      setAnswers({});
+      setShowResults(false);
+      setScore(0);
+      setReviewMode(false);
     }
-  }, []);
+  }, [storageKey]);
 
   // Save progress
   useEffect(() => {
     if (selectedLevel && !showResults && answeredCount > 0) {
-      localStorage.setItem('quizProgress', JSON.stringify({
+      localStorage.setItem(storageKey, JSON.stringify({
         selectedLevel,
         apiQuestions: selectedLevel === 'daily' ? apiQuestions : null,
         answers,
@@ -110,7 +122,7 @@ const Quiz = () => {
         currentQuestionIndex
       }));
     }
-  }, [selectedLevel, answers, score, currentQuestionIndex, showResults, answeredCount, apiQuestions]);
+  }, [selectedLevel, answers, score, currentQuestionIndex, showResults, answeredCount, apiQuestions, storageKey]);
 
   // Warn before leave
   useEffect(() => {
@@ -147,9 +159,9 @@ const Quiz = () => {
     } else {
       setShowResults(true);
       setReviewMode(false);
-      localStorage.removeItem('quizProgress');
+      localStorage.removeItem(storageKey);
     }
-  }, [currentQuestionIndex, totalQuestions]);
+  }, [currentQuestionIndex, totalQuestions, storageKey]);
 
   const prevQuestion = useCallback(() => {
     if (currentQuestionIndex > 0) {
@@ -163,8 +175,8 @@ const Quiz = () => {
     setShowResults(false);
     setScore(0);
     setReviewMode(false);
-    localStorage.removeItem('quizProgress');
-  }, []);
+    localStorage.removeItem(storageKey);
+  }, [storageKey]);
 
   const changeLevel = useCallback(() => {
     setSelectedLevel(null);
