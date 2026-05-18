@@ -201,16 +201,16 @@ const Timesheet = () => {
     const val = data[dateKey];
     if (!val) return { hours: 0, transportOnly: false };
     if (typeof val === 'object') {
-      return { hours: val.hours || 0, transportOnly: !!val.transportOnly };
+      return { hours: Number(val.hours) || 0, transportOnly: !!val.transportOnly };
     }
-    return { hours: parseInt(val, 10) || 0, transportOnly: false };
+    return { hours: parseFloat(val) || 0, transportOnly: false };
   };
 
   const incrementHour = (dateKey) => {
     const dayData = getDayData(dateKey);
     const newDayData = {
       ...dayData,
-      hours: dayData.hours + 1
+      hours: dayData.hours + 0.5
     };
     const newData = { ...data, [dateKey]: newDayData };
     saveData(newData);
@@ -220,7 +220,7 @@ const Timesheet = () => {
     const dayData = getDayData(dateKey);
     const newDayData = {
       ...dayData,
-      hours: Math.max(0, dayData.hours - 1)
+      hours: Math.max(0, dayData.hours - 0.5)
     };
     const newData = { ...data };
     if (newDayData.hours === 0 && !newDayData.transportOnly) {

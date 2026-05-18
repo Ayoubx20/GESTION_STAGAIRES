@@ -439,9 +439,9 @@
             const val = timesheetData[dateKey];
             if (!val) return { hours: 0, transportOnly: false };
             if (typeof val === 'object') {
-                return { hours: val.hours || 0, transportOnly: !!val.transportOnly };
+                return { hours: Number(val.hours) || 0, transportOnly: !!val.transportOnly };
             }
-            return { hours: parseInt(val, 10) || 0, transportOnly: false };
+            return { hours: parseFloat(val) || 0, transportOnly: false };
         }
 
         function updateHour(dateKey, delta) {
@@ -664,9 +664,9 @@
                 cell.innerHTML = `
                     <div class="day-number">${dayNumber}</div>
                     <div class="hours-input">
-                        <button onclick="updateHour('${dateKey}', -1)">-</button>
+                        <button onclick="updateHour('${dateKey}', -0.5)">-</button>
                         <span class="hours-value">${hours}</span>
-                        <button onclick="updateHour('${dateKey}', 1)">+</button>
+                        <button onclick="updateHour('${dateKey}', 0.5)">+</button>
                     </div>
                     ${hasTransport ? `
                         <div class="day-total">
