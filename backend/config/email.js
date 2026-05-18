@@ -3,10 +3,15 @@ const nodemailer = require('nodemailer');
 
 // Configuration dyal email (transporter)
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // ou utilisez un autre service (Outlook, Yahoo, etc.)
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true pour le port 465
   auth: {
     user: process.env.EMAIL_USER, // Votre email
     pass: process.env.EMAIL_PASS  // Votre mot de passe ou "App Password"
+  },
+  tls: {
+    rejectUnauthorized: false // Évite les blocages de certificats SSL sur certains réseaux/locaux
   }
 });
 
@@ -46,18 +51,16 @@ const sendEmail = async (to, subject, html) => {
   } catch (error) {
     console.error('❌ Erreur envoi email:', error);
     
-    if (isDev) {
-      console.log('----------------------------------------------------');
-      console.log('⚠️  [SIMULATION DÉFAILLANCE - EMAIL SIMULÉ EN DEV] ⚠️');
-      console.log(`Destinataire : ${to}`);
-      console.log(`Sujet : ${subject}`);
-      const codeMatch = html.match(/>\s*(\d{6})\s*<\/span>/);
-      if (codeMatch) {
-        console.log(`🔢 Code détecté : ${codeMatch[1]}`);
-      }
-      console.log('----------------------------------------------------');
-      return true;
+    // Écrire l'erreur détaillée dans un fichier log physique pour inspection
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logMessage = `[${new Date().toISOString()}] Erreur envoi à ${to}: ${error.message}\nStack: ${error.stack}\n\n`;
+      fs.appendFileSync(path.join(__dirname, '../email-error.log'), logMessage);
+    } catch (logErr) {
+      console.error('Impossible d\'écrire dans email-error.log:', logErr);
     }
+    
     return false;
   }
 };

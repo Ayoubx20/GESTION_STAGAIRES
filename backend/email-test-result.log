@@ -1,0 +1,10 @@
+=== EMAIL TEST RUN : 2026-05-18T17:27:40.835Z ===
+
+Credentials: user=ayou.ayou217@gmail.com, passLength=16
+
+--- Test 1: Port 465 (SSL) ---
+✅ Succeeded! MessageId: <688691b1-58b5-f3ba-b552-089df98b4657@gmail.com>
+
+--- Test 2: Port 587 (TLS) ---
+✅ Succeeded! MessageId: <16111577-fd11-631d-50b9-01f066ab172a@gmail.com>
+
