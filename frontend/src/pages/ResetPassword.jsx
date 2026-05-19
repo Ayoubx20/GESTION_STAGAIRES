@@ -68,7 +68,7 @@ const ResetPassword = () => {
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  {...register('password', { 
+                  {...register('password', {
                     required: 'Le mot de passe est requis',
                     minLength: {
                       value: 6,
@@ -107,7 +107,7 @@ const ResetPassword = () => {
                 <input
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  {...register('confirmPassword', { 
+                  {...register('confirmPassword', {
                     required: 'Veuillez confirmer votre mot de passe',
                     validate: value => value === password || 'Les mots de passe ne correspondent pas'
                   })}

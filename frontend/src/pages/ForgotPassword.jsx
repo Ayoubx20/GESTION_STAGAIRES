@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { 
-  EnvelopeIcon, 
-  ArrowLeftIcon, 
-  LockClosedIcon, 
-  EyeIcon, 
-  EyeSlashIcon, 
+import {
+  EnvelopeIcon,
+  ArrowLeftIcon,
+  LockClosedIcon,
+  EyeIcon,
+  EyeSlashIcon,
   KeyIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
@@ -19,7 +19,7 @@ const ForgotPassword = () => {
   const [step, setStep] = useState(1);
   const [userEmail, setUserEmail] = useState('');
   const [userCode, setUserCode] = useState('');
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -54,9 +54,9 @@ const ForgotPassword = () => {
   const onVerifyCode = async (data) => {
     setLoading(true);
     try {
-      const response = await api.post('/auth/verify-reset-code', { 
-        email: userEmail, 
-        code: data.code 
+      const response = await api.post('/auth/verify-reset-code', {
+        email: userEmail,
+        code: data.code
       });
       if (response.success) {
         setUserCode(data.code);
@@ -77,12 +77,12 @@ const ForgotPassword = () => {
   const onResetPassword = async (data) => {
     setLoading(true);
     try {
-      const response = await api.post('/auth/reset-password', { 
+      const response = await api.post('/auth/reset-password', {
         email: userEmail,
         code: userCode,
-        password: data.password 
+        password: data.password
       });
-      
+
       if (response.success) {
         toast.success('Mot de passe réinitialisé avec succès !', { icon: '🔐' });
         navigate('/login');
@@ -102,13 +102,13 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      
+
       {/* Decorative Glow Effects */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full mix-blend-screen filter blur-[100px] animate-pulse"></div>
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full mix-blend-screen filter blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
 
       <div className="max-w-md w-full relative z-10 transition-all duration-500 ease-in-out transform">
-        
+
         {/* Header / Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-tr from-primary-600 to-purple-600 mb-6 shadow-[0_0_40px_rgba(79,70,229,0.4)] transform rotate-12 hover:rotate-0 transition-transform duration-300">
@@ -137,7 +137,7 @@ const ForgotPassword = () => {
 
         {/* Card Container */}
         <div className="bg-gray-900/60 backdrop-blur-xl border border-gray-800/50 rounded-3xl shadow-2xl p-8 transition-all duration-500">
-          
+
           {/* STEP 1 */}
           {step === 1 && (
             <form onSubmit={handleSubmitStep1(onSendEmail)} className="space-y-6 animate-fade-in-up">
@@ -153,7 +153,7 @@ const ForgotPassword = () => {
                     id="email"
                     type="email"
                     autoComplete="email"
-                    {...registerStep1('email', { 
+                    {...registerStep1('email', {
                       required: 'L\'e-mail est requis',
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -203,7 +203,7 @@ const ForgotPassword = () => {
                     id="code"
                     type="text"
                     maxLength="6"
-                    {...registerStep2('code', { 
+                    {...registerStep2('code', {
                       required: 'Le code est requis',
                       pattern: {
                         value: /^\d{6}$/,
@@ -254,7 +254,7 @@ const ForgotPassword = () => {
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    {...registerStep3('password', { 
+                    {...registerStep3('password', {
                       required: 'Le mot de passe est requis',
                       minLength: {
                         value: 6,
@@ -290,7 +290,7 @@ const ForgotPassword = () => {
                   <input
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
-                    {...registerStep3('confirmPassword', { 
+                    {...registerStep3('confirmPassword', {
                       required: 'Confirmation requise',
                       validate: value => value === newPassword || 'Les mots de passe ne correspondent pas'
                     })}

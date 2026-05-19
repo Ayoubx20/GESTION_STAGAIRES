@@ -81,124 +81,124 @@ function App() {
               </div>
             }>
               <Routes>
-              {/* ========== ROUTES PUBLIQUES ========== */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/registration-pending" element={<RegistrationPending />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
+                {/* ========== ROUTES PUBLIQUES ========== */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/registration-pending" element={<RegistrationPending />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
 
-              {/* ========== ROUTES PROTÉGÉES ========== */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }>
-                {/* Redirection par défaut */}
-                <Route index element={<Navigate to="/timesheet" replace />} />
-
-                {/* Dashboard - accessible à tous */}
-                <Route path="dashboard" element={<Dashboard />} />
-
-                {/* ===== GESTION DES STAGIAIRES ===== */}
-                <Route path="interns" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <Interns />
+                {/* ========== ROUTES PROTÉGÉES ========== */}
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Layout />
                   </ProtectedRoute>
-                } />
-                <Route path="interns/new" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <InternForm />
-                  </ProtectedRoute>
-                } />
-                <Route path="interns/:id" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <InternDetail />
-                  </ProtectedRoute>
-                } />
-                <Route path="interns/:id/edit" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <InternForm />
-                  </ProtectedRoute>
-                } />
+                }>
+                  {/* Redirection par défaut */}
+                  <Route index element={<Navigate to="/timesheet" replace />} />
 
-                {/* ===== GESTION DES EQUIPES ===== */}
-                <Route path="teams" element={<Teams />} />
-                <Route path="teams/new" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <TeamForm />
-                  </ProtectedRoute>
-                } />
-                <Route path="teams/:id/edit" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <TeamForm />
-                  </ProtectedRoute>
-                } />
+                  {/* Dashboard - accessible à tous */}
+                  <Route path="dashboard" element={<Dashboard />} />
 
-                {/* ===== GESTION DES TÂCHES ===== */}
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="tasks/new" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <TaskForm />
-                  </ProtectedRoute>
-                } />
-                <Route path="tasks/:id" element={<TaskDetail />} />
-                <Route path="tasks/:id/edit" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <TaskForm />
-                  </ProtectedRoute>
-                } />
+                  {/* ===== GESTION DES STAGIAIRES ===== */}
+                  <Route path="interns" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <Interns />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="interns/new" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <InternForm />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="interns/:id" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <InternDetail />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="interns/:id/edit" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <InternForm />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* ===== GESTION DES EQUIPES ===== */}
+                  <Route path="teams" element={<Teams />} />
+                  <Route path="teams/new" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <TeamForm />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="teams/:id/edit" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <TeamForm />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* ===== GESTION DES TÂCHES ===== */}
+                  <Route path="tasks" element={<Tasks />} />
+                  <Route path="tasks/new" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <TaskForm />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="tasks/:id" element={<TaskDetail />} />
+                  <Route path="tasks/:id/edit" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <TaskForm />
+                    </ProtectedRoute>
+                  } />
 
 
-                {/* ===== GESTION DES UTILISATEURS ===== */}
-                <Route path="users" element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <Users />
-                  </ProtectedRoute>
-                } />
+                  {/* ===== GESTION DES UTILISATEURS ===== */}
+                  <Route path="users" element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <Users />
+                    </ProtectedRoute>
+                  } />
 
-                {/* ===== GESTION DES APPROBATIONS (Admin seulement) ===== */}
-                <Route path="approvals" element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <PendingApprovals />
-                  </ProtectedRoute>
-                } />
+                  {/* ===== GESTION DES APPROBATIONS (Admin seulement) ===== */}
+                  <Route path="approvals" element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <PendingApprovals />
+                    </ProtectedRoute>
+                  } />
 
-                {/* ===== RAPPORTS ===== */}
-                <Route path="reports" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
+                  {/* ===== RAPPORTS ===== */}
+                  <Route path="reports" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <Reports />
+                    </ProtectedRoute>
+                  } />
 
-                {/* ===== EVALUATIONS ===== */}
-                <Route path="interns/:id/evaluations" element={
-                  <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
-                    <Evaluations />
-                  </ProtectedRoute>
-                } />
+                  {/* ===== EVALUATIONS ===== */}
+                  <Route path="interns/:id/evaluations" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <Evaluations />
+                    </ProtectedRoute>
+                  } />
 
-                {/* ===== AUTRES PAGES ===== */}
-                <Route path="profile" element={<Profile />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="timesheet" element={<Timesheet />} />
+                  {/* ===== AUTRES PAGES ===== */}
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="timesheet" element={<Timesheet />} />
 
-                {/* ===== DOCUMENTS STAGIAIRE ===== */}
-                <Route path="my-documents" element={
-                  <ProtectedRoute allowedRoles={['intern']}>
-                    <MyDocuments />
-                  </ProtectedRoute>
-                } />
+                  {/* ===== DOCUMENTS STAGIAIRE ===== */}
+                  <Route path="my-documents" element={
+                    <ProtectedRoute allowedRoles={['intern']}>
+                      <MyDocuments />
+                    </ProtectedRoute>
+                  } />
 
-                {/* ===== RECHERCHE GLOBALE ===== */}
-                <Route path="search" element={<GlobalSearch />} />
+                  {/* ===== RECHERCHE GLOBALE ===== */}
+                  <Route path="search" element={<GlobalSearch />} />
 
-                {/* ===== TEST INFORMATIQUE ===== */}
-                <Route path="quiz" element={<Quiz />} />
-              </Route>
+                  {/* ===== TEST INFORMATIQUE ===== */}
+                  <Route path="quiz" element={<Quiz />} />
+                </Route>
 
-              {/* ========== ROUTE 404 ========== */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                {/* ========== ROUTE 404 ========== */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </Suspense>
           </ThemeProvider>
         </LanguageProvider>

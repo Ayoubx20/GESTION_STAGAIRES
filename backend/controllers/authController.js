@@ -23,23 +23,23 @@ exports.register = async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        success: false, 
-        errors: errors.array() 
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
       });
     }
 
     const { firstName, lastName, email, password, role, phone } = req.body;
 
     // Vérification plus robuste de l'email
-    const existingUser = await User.findOne({ 
-      email: email.toLowerCase().trim() 
+    const existingUser = await User.findOne({
+      email: email.toLowerCase().trim()
     });
-    
+
     if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cet email est déjà utilisé' 
+      return res.status(400).json({
+        success: false,
+        message: 'Cet email est déjà utilisé'
       });
     }
 
@@ -97,9 +97,9 @@ exports.register = async (req, res) => {
 
   } catch (error) {
     console.error('❌ ERREUR SERVEUR DANS REGISTER:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 };
@@ -113,24 +113,24 @@ exports.login = async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        success: false, 
-        errors: errors.array() 
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
       });
     }
 
     const { email, password } = req.body;
 
     // Recherche avec email normalisé
-    const user = await User.findOne({ 
-      email: email.toLowerCase().trim() 
+    const user = await User.findOne({
+      email: email.toLowerCase().trim()
     }).select('+password');
-    
+
     if (!user) {
       console.log('❌ Utilisateur non trouvé');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Email ou mot de passe incorrect' 
+      return res.status(401).json({
+        success: false,
+        message: 'Email ou mot de passe incorrect'
       });
     }
 
@@ -140,24 +140,24 @@ exports.login = async (req, res) => {
     console.log('🔑 Mot de passe valide:', isMatch);
 
     if (!isMatch) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Email ou mot de passe incorrect' 
+      return res.status(401).json({
+        success: false,
+        message: 'Email ou mot de passe incorrect'
       });
     }
 
     // Vérifications du compte
     if (!user.isActive) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Ce compte a été désactivé' 
+      return res.status(403).json({
+        success: false,
+        message: 'Ce compte a été désactivé'
       });
     }
 
     if (user.role !== 'admin' && !user.isApproved) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Votre compte est en attente d\'approbation par un administrateur' 
+      return res.status(403).json({
+        success: false,
+        message: 'Votre compte est en attente d\'approbation par un administrateur'
       });
     }
 
@@ -205,9 +205,9 @@ exports.login = async (req, res) => {
 
   } catch (error) {
     console.error('❌ ERREUR SERVEUR DANS LOGIN:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 };
@@ -219,11 +219,11 @@ exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
       .select('-password');
-    
+
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Utilisateur non trouvé' 
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
       });
     }
 
@@ -255,9 +255,9 @@ exports.getMe = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ ERREUR SERVEUR DANS GETME:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erreur serveur' 
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 };
@@ -286,22 +286,22 @@ exports.registerWithCV = async (req, res) => {
   try {
     console.log('📝 Nouvelle candidature avec CV');
 
-    const { firstName, lastName, email, password, phone, 
-            appliedFor, education, skills, experience, startDate } = req.body;
+    const { firstName, lastName, email, password, phone,
+      appliedFor, education, skills, experience, startDate } = req.body;
 
     // Validation des champs requis
     if (!firstName || !lastName || !email || !password) {
       if (req.file) await fs.unlink(req.file.path);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Tous les champs requis doivent être remplis' 
+      return res.status(400).json({
+        success: false,
+        message: 'Tous les champs requis doivent être remplis'
       });
     }
 
     if (!req.file) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'CV requis' 
+      return res.status(400).json({
+        success: false,
+        message: 'CV requis'
       });
     }
 
@@ -309,9 +309,9 @@ exports.registerWithCV = async (req, res) => {
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(req.file.mimetype)) {
       await fs.unlink(req.file.path);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Format de fichier non supporté. Utilisez PDF ou DOC/DOCX' 
+      return res.status(400).json({
+        success: false,
+        message: 'Format de fichier non supporté. Utilisez PDF ou DOC/DOCX'
       });
     }
 
@@ -319,9 +319,9 @@ exports.registerWithCV = async (req, res) => {
     const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingUser) {
       await fs.unlink(req.file.path);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cet email est déjà utilisé' 
+      return res.status(400).json({
+        success: false,
+        message: 'Cet email est déjà utilisé'
       });
     }
 
@@ -395,7 +395,7 @@ exports.registerWithCV = async (req, res) => {
 
   } catch (error) {
     console.error('❌ ERREUR DANS REGISTERWITHCV:', error);
-    
+
     // Supprimer le fichier en cas d'erreur
     if (req.file) {
       try {
@@ -404,10 +404,10 @@ exports.registerWithCV = async (req, res) => {
         console.error('❌ Erreur lors de la suppression du fichier:', unlinkError);
       }
     }
-    
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Erreur serveur' 
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur serveur'
     });
   }
 };

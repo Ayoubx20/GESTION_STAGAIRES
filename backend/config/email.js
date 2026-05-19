@@ -50,7 +50,7 @@ const sendEmail = async (to, subject, html) => {
     return true;
   } catch (error) {
     console.error('❌ Erreur envoi email:', error);
-    
+
     // Écrire l'erreur détaillée dans un fichier log physique pour inspection
     try {
       const fs = require('fs');
@@ -60,7 +60,7 @@ const sendEmail = async (to, subject, html) => {
     } catch (logErr) {
       console.error('Impossible d\'écrire dans email-error.log:', logErr);
     }
-    
+
     return false;
   }
 };
