@@ -422,6 +422,14 @@ exports.forgotPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Veuillez fournir un e-mail' });
     }
 
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('❌ Configuration e-mail manquante dans les variables d\'environnement.');
+      return res.status(500).json({
+        success: false,
+        message: "Configuration e-mail manquante sur le serveur. Veuillez ajouter EMAIL_USER et EMAIL_PASS dans les variables d'environnement de votre projet Vercel."
+      });
+    }
+
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur avec cet e-mail' });
