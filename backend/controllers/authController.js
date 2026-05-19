@@ -465,7 +465,10 @@ exports.forgotPassword = async (req, res) => {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save({ validateBeforeSave: false });
-      return res.status(500).json({ success: false, message: "Erreur lors de l'envoi de l'e-mail" });
+      return res.status(500).json({ 
+        success: false, 
+        message: `Impossible d'envoyer l'e-mail de réinitialisation: ${err.message || err}` 
+      });
     }
   } catch (error) {
     console.error('❌ ERREUR DANS FORGOTPASSWORD:', error);

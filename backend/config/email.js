@@ -75,7 +75,8 @@ const sendEmail = async (to, subject, html) => {
       return true;
     }
 
-    return false;
+    // En production, on lève l'erreur pour la transmettre au contrôleur et l'afficher sur le frontend
+    throw error;
   }
 };
 
