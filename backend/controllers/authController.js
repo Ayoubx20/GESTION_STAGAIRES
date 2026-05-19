@@ -465,8 +465,40 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+// @desc    Verify Reset Code
+// @route   POST /api/auth/verify-reset-code
+// @access  Public
+exports.verifyResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ success: false, message: 'Email et code sont requis' });
+    }
+
+    // Obtenir le code haché
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(code.toString().trim())
+      .digest('hex');
+
+    const user = await User.findOne({
+      email: email.toLowerCase().trim(),
+      resetPasswordToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Le code de vérification est invalide ou a expiré' });
+    }
+
+    res.status(200).json({ success: true, message: 'Code valide' });
+  } catch (error) {
+    console.error('❌ ERREUR DANS VERIFYRESETCODE:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 // @desc    Reset Password
-// @route   POST /api/auth/reset-password
 // @access  Public
 exports.resetPassword = async (req, res) => {
   try {

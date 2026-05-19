@@ -31,12 +31,18 @@ const resetPasswordValidation = [
   body('password').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères')
 ];
 
+const verifyCodeValidation = [
+  body('email').isEmail().withMessage('Email invalide'),
+  body('code').isLength({ min: 6, max: 6 }).withMessage('Le code doit contenir 6 chiffres')
+];
+
 // Ttorqan (Routes)
 router.post('/register', registerValidation, authController.register);
 router.post('/login', loginValidation, authController.login);
 router.post('/logout', auth, authController.logout);
 router.get('/me', auth, authController.getMe);
 router.post('/forgot-password', forgotPasswordValidation, authController.forgotPassword);
+router.post('/verify-reset-code', verifyCodeValidation, authController.verifyResetCode);
 router.post('/reset-password', resetPasswordValidation, authController.resetPassword);
 
 module.exports = router;
