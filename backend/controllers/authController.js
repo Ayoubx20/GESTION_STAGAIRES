@@ -426,7 +426,7 @@ exports.forgotPassword = async (req, res) => {
       console.error('❌ Configuration e-mail manquante dans les variables d\'environnement.');
       return res.status(500).json({
         success: false,
-        message: "Configuration e-mail manquante sur le serveur. Veuillez ajouter EMAIL_USER et EMAIL_PASS dans les variables d'environnement de votre projet Vercel."
+        message: "Configuration e-mail manquante sur le serveur. Veuillez ajouter EMAIL_USER et EMAIL_PASS dans les variables d'environnement de votre projet de déploiement (Vercel, Render, etc.)."
       });
     }
 
