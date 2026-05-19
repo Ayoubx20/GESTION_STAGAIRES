@@ -20,3 +20,4 @@ build/
 # Fichiers système
 .DS_Store
 Thumbs.db
+.vercel

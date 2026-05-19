@@ -1,0 +1,8 @@
+{
+  "appId": "com.gestion.app",
+  "appName": "GESTION",
+  "webDir": "dist",
+  "server": {
+    "cleartext": true
+  }
+}

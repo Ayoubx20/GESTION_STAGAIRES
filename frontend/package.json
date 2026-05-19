@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
     "@headlessui/react": "^2.1.8",
     "@heroicons/react": "^2.1.5",
     "axios": "^1.7.7",
@@ -24,6 +26,7 @@
     "recharts": "^2.12.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
