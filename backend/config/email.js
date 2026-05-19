@@ -3,9 +3,7 @@ const nodemailer = require('nodemailer');
 
 // Configuration dyal email (transporter)
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true pour le port 465
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER, // Votre email
     pass: process.env.EMAIL_PASS  // Votre mot de passe ou "App Password"
@@ -49,7 +47,7 @@ const sendEmail = async (to, subject, html) => {
     console.log('✅ Email envoyé:', info.messageId);
     return true;
   } catch (error) {
-    console.error('❌ Erreur envoi email:', error);
+    console.error('❌ Erreur envoi email (tentative SMTP):', error);
 
     // Écrire l'erreur détaillée dans un fichier log physique pour inspection
     try {
@@ -59,6 +57,22 @@ const sendEmail = async (to, subject, html) => {
       fs.appendFileSync(path.join(__dirname, '../email-error.log'), logMessage);
     } catch (logErr) {
       console.error('Impossible d\'écrire dans email-error.log:', logErr);
+    }
+
+    // En mode développement, si l'envoi SMTP échoue (ex: problème réseau, absence d'internet, identifiants invalides),
+    // on bascule élégamment sur le mode simulation pour ne pas bloquer l'utilisateur/développeur.
+    if (isDev) {
+      console.log('----------------------------------------------------');
+      console.log('⚠️  [SMTP EN PANNE - BACKUP SIMULATION MODE DEV] ⚠️');
+      console.log('L\'envoi réel a échoué, mais nous simulons pour ne pas vous bloquer.');
+      console.log(`Destinataire : ${to}`);
+      console.log(`Sujet : ${subject}`);
+      const codeMatch = html.match(/>\s*(\d{6})\s*<\/span>/);
+      if (codeMatch) {
+        console.log(`🔢 Code détecté : ${codeMatch[1]}`);
+      }
+      console.log('----------------------------------------------------');
+      return true;
     }
 
     return false;
