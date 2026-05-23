@@ -43,17 +43,31 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline often needed for dev/some libs
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // unsafe-inline and unsafe-eval for dev/React compatibility
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "blob:"],
-            connectSrc: ["'self'", "https://quizzapi.jomoreschi.fr"],
-            frameAncestors: ["'none'"], // Same as X-Frame-Options DENY
+            connectSrc: [
+                "'self'", 
+                "https://quizzapi.jomoreschi.fr",
+                "https://gestion-brown.vercel.app/api",
+                "https://gestion-stagiaire-backend.onrender.com"
+            ],
+            frameAncestors: ["'self'"], // Same as X-Frame-Options SAMEORIGIN
         },
     },
-    xFrameOptions: { action: 'deny' },
+    xFrameOptions: { action: 'sameorigin' }, // Aligns with requested X-Frame-Options: SAMEORIGIN
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
+
+// Set Permissions-Policy header
+app.use((req, res, next) => {
+    res.setHeader(
+        'Permissions-Policy',
+        'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+    );
+    next();
+});
 app.use(compression());
 
 // Parser le JSON et les données URL-encodées

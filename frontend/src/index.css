@@ -192,4 +192,18 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Custom orbital rotation animation */
+  @keyframes orbitSlow {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-orbit-slow {
+    animation: orbitSlow 6s linear infinite;
+  }
 }

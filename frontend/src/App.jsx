@@ -4,11 +4,14 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { AntigravityProvider } from './contexts/AntigravityContext';
 
 // Layout
 import Layout from './components/Layout.jsx';
 
+
 // Pages Publiques
+const Landing = lazy(() => import('./pages/Landing.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const RegistrationPending = lazy(() => import('./pages/RegistrationPending.jsx'));
@@ -50,7 +53,8 @@ function App() {
       <AuthProvider>
         <LanguageProvider>
           <ThemeProvider>
-            <Toaster
+            <AntigravityProvider>
+              <Toaster
               position="top-right"
               toastOptions={{
                 duration: 4000,
@@ -82,19 +86,18 @@ function App() {
             }>
               <Routes>
                 {/* ========== ROUTES PUBLIQUES ========== */}
+                <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/registration-pending" element={<RegistrationPending />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
 
                 {/* ========== ROUTES PROTÉGÉES ========== */}
-                <Route path="/" element={
+                <Route element={
                   <ProtectedRoute>
                     <Layout />
                   </ProtectedRoute>
                 }>
-                  {/* Redirection par défaut */}
-                  <Route index element={<Navigate to="/timesheet" replace />} />
 
                   {/* Dashboard - accessible à tous */}
                   <Route path="dashboard" element={<Dashboard />} />
@@ -200,7 +203,8 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
-          </ThemeProvider>
+          </AntigravityProvider>
+        </ThemeProvider>
         </LanguageProvider>
       </AuthProvider>
     </Router>

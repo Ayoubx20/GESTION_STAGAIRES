@@ -75,7 +75,13 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F3F5FA] py-12 px-4 sm:px-6 lg:px-8 login-container">
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+      .login-container {
+        font-family: 'Outfit', sans-serif;
+      }
+    `}</style>
       <div className="max-w-md w-full">
         {/* Logo et titre */}
         <div className="text-center mb-8">
