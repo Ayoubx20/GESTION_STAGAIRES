@@ -288,6 +288,16 @@ const Timesheet = () => {
     return `${hours}.${minStr}`;
   };
 
+  // Format decimal hours as '1h 30min' for display in summary cards
+  const formatHoursMinutes = (H) => {
+    if (!H || H <= 0) return '0h';
+    const totalMinutes = Math.round(H * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}min`;
+  };
+
   const handleHoursChange = (dateKey, val) => {
     if (val === '' || /^[0-9]*\.?[0-9]*$/.test(val)) {
       // Si la partie après la virgule contient 2 chiffres ou plus, on vérifie si ça dépasse 59
@@ -637,7 +647,7 @@ const Timesheet = () => {
         <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 dark:shadow-none relative overflow-hidden">
           <div className="relative z-10">
             <p className="text-indigo-100 text-sm font-medium mb-1">Total Heures Travaillées</p>
-            <p className="text-3xl font-black">{formatDecimalHoursToDisplay(totalMonthHours) || '0'} <span className="text-lg font-medium opacity-80">h</span></p>
+            <p className="text-3xl font-black">{formatHoursMinutes(totalMonthHours)}</p>
             <p className="text-indigo-100 text-sm mt-2">Soit {Number((totalMonthHours * 700).toFixed(2)).toLocaleString('fr-FR')} DH</p>
           </div>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
