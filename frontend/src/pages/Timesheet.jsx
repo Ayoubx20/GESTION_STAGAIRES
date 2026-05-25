@@ -9,6 +9,7 @@ const Timesheet = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [tempHours, setTempHours] = useState({});
 
   // Unique key for storage per user (retained for migration check)
   const storageKey = user?._id ? `timesheet_data_${user._id}` : 'timesheet_data';
@@ -210,9 +211,14 @@ const Timesheet = () => {
     const dayData = getDayData(dateKey);
     const newDayData = {
       ...dayData,
-      hours: dayData.hours + 0.5
+      hours: Number((dayData.hours + 0.5).toFixed(2))
     };
     const newData = { ...data, [dateKey]: newDayData };
+    setTempHours(prev => {
+      const copy = { ...prev };
+      delete copy[dateKey];
+      return copy;
+    });
     saveData(newData);
   };
 
@@ -220,7 +226,7 @@ const Timesheet = () => {
     const dayData = getDayData(dateKey);
     const newDayData = {
       ...dayData,
-      hours: Math.max(0, dayData.hours - 0.5)
+      hours: Math.max(0, Number((dayData.hours - 0.5).toFixed(2)))
     };
     const newData = { ...data };
     if (newDayData.hours === 0 && !newDayData.transportOnly) {
@@ -228,7 +234,80 @@ const Timesheet = () => {
     } else {
       newData[dateKey] = newDayData;
     }
+    setTempHours(prev => {
+      const copy = { ...prev };
+      delete copy[dateKey];
+      return copy;
+    });
     saveData(newData);
+  };
+
+  const parseInputToDecimalHours = (val) => {
+    if (!val || val.trim() === '') return 0;
+    const parts = val.split('.');
+    const hours = parseInt(parts[0], 10) || 0;
+    let minutes = 0;
+    if (parts.length > 1) {
+      minutes = parseInt(parts[1], 10) || 0;
+    }
+    return hours + (minutes / 60);
+  };
+
+  const formatDecimalHoursToDisplay = (H) => {
+    if (!H || H <= 0) return '';
+    const totalMinutes = Math.round(H * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (minutes === 0) return `${hours}`;
+    if (minutes % 10 === 0) return `${hours}.${minutes}`;
+    return `${hours}.${minutes}`;
+  };
+
+  const handleHoursChange = (dateKey, val) => {
+    setTempHours(prev => ({
+      ...prev,
+      [dateKey]: val
+    }));
+  };
+
+  const handleHoursBlur = (dateKey) => {
+    const val = tempHours[dateKey];
+    if (val === undefined) return;
+
+    const decimalHours = parseInputToDecimalHours(val);
+
+    setTempHours(prev => {
+      const copy = { ...prev };
+      delete copy[dateKey];
+      return copy;
+    });
+
+    const dayData = getDayData(dateKey);
+    const newDayData = {
+      ...dayData,
+      hours: Number(decimalHours.toFixed(6))
+    };
+
+    const newData = { ...data };
+    if (newDayData.hours === 0 && !newDayData.transportOnly) {
+      delete newData[dateKey];
+    } else {
+      newData[dateKey] = newDayData;
+    }
+    saveData(newData);
+  };
+
+  const handleHoursKeyDown = (dateKey, e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  };
+
+  const getDisplayHours = (dateKey, storedHours) => {
+    if (tempHours[dateKey] !== undefined) {
+      return tempHours[dateKey];
+    }
+    return formatDecimalHoursToDisplay(storedHours);
   };
 
   const toggleTransportOnly = (dateKey) => {
@@ -243,6 +322,11 @@ const Timesheet = () => {
     } else {
       newData[dateKey] = newDayData;
     }
+    setTempHours(prev => {
+      const copy = { ...prev };
+      delete copy[dateKey];
+      return copy;
+    });
     saveData(newData);
   };
 
@@ -261,9 +345,9 @@ const Timesheet = () => {
 
       monthData.push({
         Date: dateKey,
-        Heures: hours,
+        Heures: formatDecimalHoursToDisplay(hours) || '0',
         "Frais Transport (DH)": transport,
-        "Total Jour (DH)": total
+        "Total Jour (DH)": Number(total.toFixed(2))
       });
     });
 
@@ -308,12 +392,14 @@ const Timesheet = () => {
     const dateKey = `${year}-${month}-${dayStr}`;
 
     const dayData = getDayData(dateKey);
-    const numHours = dayData.hours;
+    const numHours = tempHours[dateKey] !== undefined 
+      ? parseInputToDecimalHours(tempHours[dateKey]) 
+      : dayData.hours;
     const transportOnly = dayData.transportOnly;
 
     const hasTransport = numHours > 0 || transportOnly;
     const transport = hasTransport ? 200 : 0;
-    const dailyTotal = (numHours * 700) + transport;
+    const dailyTotal = Number(((numHours * 700) + transport).toFixed(2));
 
     totalMonthHours += numHours;
     totalTransport += transport;
@@ -363,9 +449,21 @@ const Timesheet = () => {
                 >
                   <MinusIcon className="w-4 h-4" />
                 </button>
-                <span className="text-lg font-bold text-gray-900 dark:text-white w-12 text-center">
-                  {numHours}
-                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={getDisplayHours(dateKey, numHours)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^[0-9]*\.?[0-9]*$/.test(val)) {
+                      handleHoursChange(dateKey, val);
+                    }
+                  }}
+                  onBlur={() => handleHoursBlur(dateKey)}
+                  onKeyDown={(e) => handleHoursKeyDown(dateKey, e)}
+                  className="text-lg font-bold text-gray-900 dark:text-white w-16 text-center bg-transparent border-0 focus:ring-0 focus:outline-none p-0"
+                />
                 <button
                   onClick={() => incrementHour(dateKey)}
                   className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
@@ -400,6 +498,8 @@ const Timesheet = () => {
       </div>
     );
   });
+
+  grandTotal = Number(grandTotal.toFixed(2));
 
   if (loading) {
     return (
@@ -501,8 +601,8 @@ const Timesheet = () => {
         <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 dark:shadow-none relative overflow-hidden">
           <div className="relative z-10">
             <p className="text-indigo-100 text-sm font-medium mb-1">Total Heures Travaillées</p>
-            <p className="text-3xl font-black">{totalMonthHours} <span className="text-lg font-medium opacity-80">h</span></p>
-            <p className="text-indigo-100 text-sm mt-2">Soit {(totalMonthHours * 700).toLocaleString('fr-FR')} DH</p>
+            <p className="text-3xl font-black">{formatDecimalHoursToDisplay(totalMonthHours) || '0'} <span className="text-lg font-medium opacity-80">h</span></p>
+            <p className="text-indigo-100 text-sm mt-2">Soit {Number((totalMonthHours * 700).toFixed(2)).toLocaleString('fr-FR')} DH</p>
           </div>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
         </div>

@@ -444,11 +444,48 @@
             return { hours: parseFloat(val) || 0, transportOnly: false };
         }
 
+        function parseInputToDecimalHours(val) {
+            if (!val || val.trim() === '') return 0;
+            const parts = val.split('.');
+            const hours = parseInt(parts[0], 10) || 0;
+            let minutes = 0;
+            if (parts.length > 1) {
+                minutes = parseInt(parts[1], 10) || 0;
+            }
+            return hours + (minutes / 60);
+        }
+
+        function formatDecimalHoursToDisplay(H) {
+            if (!H || H <= 0) return '';
+            const totalMinutes = Math.round(H * 60);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            if (minutes === 0) return `${hours}`;
+            if (minutes % 10 === 0) return `${hours}.${minutes}`;
+            return `${hours}.${minutes}`;
+        }
+
         function updateHour(dateKey, delta) {
             const dayData = getDayData(dateKey);
             const newDayData = {
                 ...dayData,
-                hours: Math.max(0, dayData.hours + delta)
+                hours: Math.max(0, Number((dayData.hours + delta).toFixed(6)))
+            };
+            if (newDayData.hours === 0 && !newDayData.transportOnly) {
+                delete timesheetData[dateKey];
+            } else {
+                timesheetData[dateKey] = newDayData;
+            }
+            localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
+            renderCalendar();
+        }
+
+        function setCustomHour(dateKey, val) {
+            const decimalHours = parseInputToDecimalHours(val);
+            const dayData = getDayData(dateKey);
+            const newDayData = {
+                ...dayData,
+                hours: Number(decimalHours.toFixed(6))
             };
             if (newDayData.hours === 0 && !newDayData.transportOnly) {
                 delete timesheetData[dateKey];
@@ -570,10 +607,11 @@
                 const key = formatDateKey(current.getFullYear(), current.getMonth(), current.getDate());
                 const dayData = getDayData(key);
                 const hours = dayData.hours;
+                const formattedHours = formatDecimalHoursToDisplay(hours) || '0';
                 const hoursPay = hours * HOURLY_RATE;
                 const transport = (hours > 0 || dayData.transportOnly) ? DAILY_TRANSPORT : 0;
                 const total = hoursPay + transport;
-                csv += `${key},${hours},${hoursPay},${transport},${total}\n`;
+                csv += `${key},${formattedHours},${hoursPay.toFixed(2)},${transport},${total.toFixed(2)}\n`;
                 current.setDate(current.getDate() + 1);
             }
 
@@ -652,7 +690,7 @@
                 const isToday = (cellYear === today.getFullYear() && cellMonth === today.getMonth() && dayNumber === today.getDate());
 
                 const transport = hasTransport ? DAILY_TRANSPORT : 0;
-                const dailyTotal = (hours * HOURLY_RATE) + transport;
+                const dailyTotal = Number(((hours * HOURLY_RATE) + transport).toFixed(2));
 
                 const cell = document.createElement('div');
                 cell.className = `day-cell ${isToday ? 'today' : ''} ${hasTransport ? 'active' : ''}`;
@@ -665,7 +703,7 @@
                     <div class="day-number">${dayNumber}</div>
                     <div class="hours-input">
                         <button onclick="updateHour('${dateKey}', -0.5)">-</button>
-                        <span class="hours-value">${hours}</span>
+                        <input type="text" inputmode="decimal" class="hours-value-input" value="${formatDecimalHoursToDisplay(hours)}" placeholder="0" onchange="setCustomHour('${dateKey}', this.value)" style="width: 36px; text-align: center; font-weight: 600; font-size: 0.8rem; border: none; background: transparent; color: var(--text-main); outline: none;" />
                         <button onclick="updateHour('${dateKey}', 0.5)">+</button>
                     </div>
                     ${hasTransport ? `
@@ -692,10 +730,10 @@
             const totalTransport = workedDaysPeriod * DAILY_TRANSPORT;
             const grandTotal = totalHoursPay + totalTransport;
 
-            document.getElementById('statHours').innerText = totalHoursPeriod;
+            document.getElementById('statHours').innerText = formatDecimalHoursToDisplay(totalHoursPeriod) || '0';
             document.getElementById('statDays').innerText = workedDaysPeriod;
             document.getElementById('statTransport').innerText = totalTransport.toLocaleString('fr-FR') + ' DH';
-            document.getElementById('statTotal').innerText = grandTotal.toLocaleString('fr-FR') + ' DH';
+            document.getElementById('statTotal').innerText = Number(grandTotal.toFixed(2)).toLocaleString('fr-FR') + ' DH';
         }
 
         document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
