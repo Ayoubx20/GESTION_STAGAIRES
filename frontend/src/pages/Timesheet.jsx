@@ -607,10 +607,6 @@ const Timesheet = () => {
             <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
             CSV
           </button>
-          <button onClick={() => exportData('json')} className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-            JSON
-          </button>
         </div>
       </div>
 
