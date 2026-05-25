@@ -11,7 +11,6 @@ import Layout from './components/Layout.jsx';
 
 
 // Pages Publiques
-const Landing = lazy(() => import('./pages/Landing.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const RegistrationPending = lazy(() => import('./pages/RegistrationPending.jsx'));
@@ -86,7 +85,7 @@ function App() {
             }>
               <Routes>
                 {/* ========== ROUTES PUBLIQUES ========== */}
-                <Route path="/" element={<Landing />} />
+                <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/registration-pending" element={<RegistrationPending />} />
