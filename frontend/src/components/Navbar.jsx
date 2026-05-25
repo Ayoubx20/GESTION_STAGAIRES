@@ -2,8 +2,7 @@ import React, { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAntigravity } from '../contexts/AntigravityContext';
-import { Orbit, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -22,7 +21,7 @@ import { Menu, Transition } from '@headlessui/react';
 const Navbar = ({ setMobileMenuOpen }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { isAntigravityActive, toggleAntigravity } = useAntigravity();
+
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [data, setData] = useState({
@@ -109,22 +108,7 @@ const Navbar = ({ setMobileMenuOpen }) => {
 
           {/* Right section */}
           <div className="flex items-center space-x-4">
-            {/* Antigravity Control Button */}
-            <button
-              type="button"
-              onClick={toggleAntigravity}
-              className={`antigravity-toggle relative p-2 rounded-lg transition-all duration-300 group flex items-center justify-center ${
-                isAntigravityActive 
-                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_15px_rgba(124,58,237,0.5)] scale-110' 
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-950/30 hover:text-purple-600 dark:hover:text-purple-400'
-              }`}
-              title="Google Antigravity Mode"
-            >
-              <Orbit className={`w-6 h-6 transition-transform duration-1000 ${isAntigravityActive ? 'rotate-[360deg] animate-spin' : 'group-hover:rotate-180'}`} style={{ animationDuration: '4s' }} />
-              {isAntigravityActive && (
-                <Sparkles className="absolute -top-1 -right-1 w-4.5 h-4.5 text-yellow-300 animate-bounce" />
-              )}
-            </button>
+
 
             {/* Messages */}
             <Menu as="div" className="relative">

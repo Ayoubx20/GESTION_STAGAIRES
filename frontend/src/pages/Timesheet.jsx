@@ -209,9 +209,17 @@ const Timesheet = () => {
 
   const incrementHour = (dateKey) => {
     const dayData = getDayData(dateKey);
+    const currentHours = tempHours[dateKey] !== undefined 
+      ? parseInputToDecimalHours(tempHours[dateKey]) 
+      : dayData.hours;
+    const currentMinutes = Math.round(currentHours * 60);
+    // Aller au prochain multiple de 30 minutes strictement supérieur
+    const nextMinutes = Math.floor(currentMinutes / 30) * 30 + 30;
+    const newHours = nextMinutes / 60;
+
     const newDayData = {
       ...dayData,
-      hours: Number((dayData.hours + 0.5).toFixed(2))
+      hours: Number(newHours.toFixed(6))
     };
     const newData = { ...data, [dateKey]: newDayData };
     setTempHours(prev => {
@@ -224,9 +232,17 @@ const Timesheet = () => {
 
   const decrementHour = (dateKey) => {
     const dayData = getDayData(dateKey);
+    const currentHours = tempHours[dateKey] !== undefined 
+      ? parseInputToDecimalHours(tempHours[dateKey]) 
+      : dayData.hours;
+    const currentMinutes = Math.round(currentHours * 60);
+    // Aller au précédent multiple de 30 minutes strictement inférieur
+    const prevMinutes = Math.floor((currentMinutes - 1) / 30) * 30;
+    const newHours = Math.max(0, prevMinutes / 60);
+
     const newDayData = {
       ...dayData,
-      hours: Math.max(0, Number((dayData.hours - 0.5).toFixed(2)))
+      hours: Number(newHours.toFixed(6))
     };
     const newData = { ...data };
     if (newDayData.hours === 0 && !newDayData.transportOnly) {
@@ -248,7 +264,16 @@ const Timesheet = () => {
     const hours = parseInt(parts[0], 10) || 0;
     let minutes = 0;
     if (parts.length > 1) {
-      minutes = parseInt(parts[1], 10) || 0;
+      let minStr = parts[1];
+      if (minStr.length === 1) {
+        minStr = minStr + '0';
+      } else if (minStr.length > 2) {
+        minStr = minStr.substring(0, 2);
+      }
+      minutes = parseInt(minStr, 10) || 0;
+      if (minutes > 59) {
+        minutes = 59;
+      }
     }
     return hours + (minutes / 60);
   };
@@ -259,15 +284,26 @@ const Timesheet = () => {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     if (minutes === 0) return `${hours}`;
-    if (minutes % 10 === 0) return `${hours}.${minutes}`;
-    return `${hours}.${minutes}`;
+    const minStr = String(minutes).padStart(2, '0');
+    return `${hours}.${minStr}`;
   };
 
   const handleHoursChange = (dateKey, val) => {
-    setTempHours(prev => ({
-      ...prev,
-      [dateKey]: val
-    }));
+    if (val === '' || /^[0-9]*\.?[0-9]*$/.test(val)) {
+      // Si la partie après la virgule contient 2 chiffres ou plus, on vérifie si ça dépasse 59
+      const parts = val.split('.');
+      if (parts.length > 1 && parts[1].length >= 2) {
+        const minStr = parts[1].substring(0, 2);
+        const minutes = parseInt(minStr, 10) || 0;
+        if (minutes > 59) {
+          val = parts[0] + '.59';
+        }
+      }
+      setTempHours(prev => ({
+        ...prev,
+        [dateKey]: val
+      }));
+    }
   };
 
   const handleHoursBlur = (dateKey) => {

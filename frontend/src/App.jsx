@@ -4,7 +4,6 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider } from './contexts/LanguageContext';
-import { AntigravityProvider } from './contexts/AntigravityContext';
 
 // Layout
 import Layout from './components/Layout.jsx';
@@ -52,7 +51,6 @@ function App() {
       <AuthProvider>
         <LanguageProvider>
           <ThemeProvider>
-            <AntigravityProvider>
               <Toaster
               position="top-right"
               toastOptions={{
@@ -202,8 +200,7 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
-          </AntigravityProvider>
-        </ThemeProvider>
+          </ThemeProvider>
         </LanguageProvider>
       </AuthProvider>
     </Router>

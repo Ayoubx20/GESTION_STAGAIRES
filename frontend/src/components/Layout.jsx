@@ -2,7 +2,6 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import AntigravityEngine from './AntigravityEngine';
 
 const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -59,7 +58,6 @@ const Layout = () => {
           </div>
         </main>
       </div>
-      <AntigravityEngine />
     </div>
   );
 };

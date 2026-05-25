@@ -100,7 +100,7 @@ const Login = () => {
 
       <div className="max-w-[420px] w-full bg-white rounded-[32px] shadow-[0_20px_50px_rgba(148,163,184,0.12)] border border-gray-100 p-8 sm:p-10 text-center relative">
         <h2 className="text-2xl sm:text-[26px] font-bold text-slate-800 tracking-tight mb-2">
-          Welcome AAA
+          Welcome A
         </h2>
 
         <LoginIllustration isPasswordFocused={isPasswordFocused} />
