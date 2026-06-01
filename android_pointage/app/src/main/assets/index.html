@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Pointage & Salaire - Calendrier</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --today-bg: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --today-text: white;
+            --weekend-color: #ef4444;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+            --gradient-primary: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --gradient-success: linear-gradient(135deg, #10b981, #059669);
+            --gradient-danger: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --primary: #818cf8;
+            --primary-hover: #6366f1;
+            --today-bg: linear-gradient(135deg, #818cf8, #a78bfa);
+            --today-text: white;
+            --weekend-color: #f87171;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+            --gradient-primary: linear-gradient(135deg, #818cf8, #a78bfa);
+            --gradient-success: linear-gradient(135deg, #34d399, #10b981);
+            --gradient-danger: linear-gradient(135deg, #f87171, #ef4444);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            padding: 1.25rem 1.5rem;
+            border-radius: 1.25rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .header:hover {
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.6rem 1.25rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .btn-icon {
+            background: var(--bg-color);
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border-radius: 0.75rem;
+            font-size: 1.2rem;
+            box-shadow: none;
+        }
+
+        .btn-icon:hover {
+            background: var(--border-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--card-shadow);
+        }
+
+        .btn-danger {
+            background: var(--gradient-danger);
+            color: white;
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 6px 15px rgba(239, 68, 68, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .month-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.25rem 1rem;
+            border-radius: 1.25rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0.5rem 0;
+            color: var(--text-main);
+        }
+
+        .calendar {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            overflow: visible;
+            margin-bottom: 1.5rem;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.25rem;
+            min-width: 0;
+        }
+
+        .day-card {
+            background: var(--card-bg);
+            border-radius: 1.25rem;
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .day-card.active {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+        
+        [data-theme="dark"] .day-card.active {
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .day-card.today {
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .day-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .day-date-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .day-date-pill {
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 0.4rem 0.8rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        
+        [data-theme="dark"] .day-date-pill {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .day-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #334155;
+        }
+        
+        [data-theme="dark"] .day-name {
+            color: #e2e8f0;
+        }
+
+        .day-total-pill {
+            background: #dcfce7;
+            color: #166534;
+            padding: 0.4rem 0.8rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        [data-theme="dark"] .day-total-pill {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .day-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .input-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .hours-control-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.25rem;
+        }
+        
+        .day-card.active .hours-control-group {
+            background: white;
+            border-color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .day-card.active .hours-control-group {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .hours-control-group button {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.5rem;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+        }
+
+        .hours-control-group button:hover {
+            background: #f1f5f9;
+            color: var(--text-main);
+            transform: translateY(0);
+        }
+
+        [data-theme="dark"] .hours-control-group button:hover {
+            background: #334155;
+        }
+
+        .hours-value-input {
+            flex: 1;
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.25rem;
+            border: none;
+            background: transparent;
+            color: var(--text-main);
+            outline: none;
+            width: 100%;
+        }
+
+        .transport-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 0.25rem;
+        }
+
+        .transport-label {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .transport-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .card-divider {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 0.25rem 0;
+            opacity: 0.6;
+        }
+
+        .btn-transport-toggle {
+            width: 100%;
+            background: #f8fafc;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 0.75rem;
+            justify-content: center;
+            display: flex;
+            align-items: center;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        [data-theme="dark"] .btn-transport-toggle {
+            background: #0f172a;
+        }
+
+        .btn-transport-toggle:hover:not(:disabled) {
+            background: #f1f5f9;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        [data-theme="dark"] .btn-transport-toggle:hover:not(:disabled) {
+            background: #1e293b;
+        }
+
+        .btn-transport-toggle.active {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border-color: var(--warning);
+        }
+
+        .btn-transport-toggle:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .footer-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .message-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Input styling */
+        .hours-value-input {
+            width: 36px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            border: none;
+            background: transparent;
+            color: var(--text-main);
+            outline: none;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 1rem;
+                gap: 0.85rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .header > h1 {
+                text-align: center;
+                font-size: 1.3rem;
+            }
+
+            /* Responsive layout for Navigation controls & Today button */
+            .nav-controls {
+                display: grid;
+                grid-template-columns: auto 1fr auto;
+                grid-template-rows: auto auto;
+                gap: 0.5rem;
+                align-items: center;
+                width: 100%;
+            }
+
+            #prevMonthBtn {
+                grid-column: 1;
+                grid-row: 1;
+            }
+
+            .month-title {
+                grid-column: 2;
+                grid-row: 1;
+                min-width: unset;
+                font-size: 0.95rem;
+                text-align: center;
+            }
+
+            #nextMonthBtn {
+                grid-column: 3;
+                grid-row: 1;
+            }
+
+            #todayBtn {
+                grid-column: 1 / span 3;
+                grid-row: 2;
+                width: 100%;
+                text-align: center;
+                padding: 0.6rem;
+                margin-top: 0.25rem;
+            }
+
+            /* Theme, Export, and Reset button layouts */
+            .header > div:last-child {
+                display: flex;
+                justify-content: space-between;
+                gap: 0.5rem;
+                width: 100%;
+            }
+
+            .header > div:last-child button {
+                flex: 1;
+                padding: 0.5rem 0.2rem;
+                font-size: 0.75rem;
+                text-align: center;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 0.25rem;
+            }
+
+            .day-cell {
+                min-height: 85px;
+                padding: 0.25rem;
+            }
+
+            .day-number {
+                width: 20px;
+                height: 20px;
+                line-height: 20px;
+                font-size: 0.7rem;
+            }
+
+            .hours-value-input {
+                width: 22px;
+                font-size: 0.75rem;
+            }
+
+            .hours-input {
+                gap: 0.1rem;
+            }
+
+            .hours-input button {
+                width: 18px;
+                height: 18px;
+                font-size: 0.8rem;
+            }
+
+            .day-total {
+                font-size: 0.65rem;
+                margin-top: 0.4rem;
+                padding-top: 0.2rem;
+            }
+
+            .transport-badge {
+                font-size: 0.55rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Pointage (20 → 20)</h1>
+            <div class="nav-controls">
+                <button class="btn-icon" id="prevMonthBtn">◀</button>
+                <div class="month-title" id="monthTitle">Mai 2026</div>
+                <button class="btn-icon" id="nextMonthBtn">▶</button>
+                <button class="btn-primary" id="todayBtn">📅 Aujourd'hui</button>
+            </div>
+            <div>
+                <button class="btn-outline" id="themeToggle">🌙 Sombre</button>
+                <button class="btn-outline" id="exportBtn">📥 CSV</button>
+                <button class="btn-danger" id="resetBtn">🗑️ Reset</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Heures</div>
+                <div class="stat-value" id="statHours">0</div>
+                <div class="stat-label">(700 DH/h)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Jours travaillés</div>
+                <div class="stat-value" id="statDays">0</div>
+                <div class="stat-label">200 DH/jour</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Transport</div>
+                <div class="stat-value" id="statTransport">0 DH</div>
+            </div>
+            <div class="stat-card" style="background: var(--primary); color: white;">
+                <div class="stat-label">Total</div>
+                <div class="stat-value" id="statTotal">0 DH</div>
+            </div>
+        </div>
+
+        <div class="calendar">
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="footer-actions">
+            <small>💰 700 DH/heure + 200 DH transport par jour travaillé</small>
+        </div>
+    </div>
+
+    <script>
+        const HOURLY_RATE = 700;
+        const DAILY_TRANSPORT = 200;
+
+        let currentDate = new Date();
+        let timesheetData = JSON.parse(localStorage.getItem('timesheet_period_data')) || {};
+
+        const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+        function showMessage(message, isError = false) {
+            const existing = document.querySelector('.message-toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = 'message-toast';
+            toast.style.backgroundColor = isError ? 'var(--danger)' : 'var(--success)';
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function formatDateKey(year, month, day) {
+            return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+
+        function isInPeriod(date) {
+            const day = date.getDate();
+            const month = date.getMonth();
+            const year = date.getFullYear();
+
+            let periodStartMonth = month;
+            let periodStartYear = year;
+            if (day < 20) {
+                periodStartMonth = month - 1;
+                if (periodStartMonth < 0) {
+                    periodStartMonth = 11;
+                    periodStartYear = year - 1;
+                }
+            }
+
+            const periodStart = new Date(periodStartYear, periodStartMonth, 20);
+            const periodEnd = new Date(periodStartYear, periodStartMonth + 1, 20);
+
+            return date >= periodStart && date <= periodEnd;
+        }
+
+        function getDayData(dateKey) {
+            const val = timesheetData[dateKey];
+            if (!val) return { hours: 0, transportOnly: false };
+            if (typeof val === 'object') {
+                return { hours: Number(val.hours) || 0, transportOnly: !!val.transportOnly };
+            }
+            return { hours: parseFloat(val) || 0, transportOnly: false };
+        }
+
+        function parseInputToDecimalHours(val) {
+            if (!val || val.trim() === '') return 0;
+            const parts = val.split('.');
+            const hours = parseInt(parts[0], 10) || 0;
+            let minutes = 0;
+            if (parts.length > 1) {
+                minutes = parseInt(parts[1], 10) || 0;
+            }
+            return hours + (minutes / 60);
+        }
+
+        // Custom display formatting for fractional / decimal hours
+        function formatDecimalHoursToDisplay(H) {
+            if (!H || H <= 0) return '';
+            const totalMinutes = Math.round(H * 60);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            if (minutes === 0) return `${hours}`;
+            if (minutes % 10 === 0) return `${hours}.${minutes}`;
+            return `${hours}.${minutes}`;
+        }
+
+        function updateHour(dateKey, delta) {
+            const dayData = getDayData(dateKey);
+            const newDayData = {
+                ...dayData,
+                hours: Math.max(0, Number((dayData.hours + delta).toFixed(6)))
+            };
+            if (newDayData.hours === 0 && !newDayData.transportOnly) {
+                delete timesheetData[dateKey];
+            } else {
+                timesheetData[dateKey] = newDayData;
+            }
+            localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
+            renderCalendar();
+        }
+
+        function setCustomHour(dateKey, val) {
+            const decimalHours = parseInputToDecimalHours(val);
+            const dayData = getDayData(dateKey);
+            const newDayData = {
+                ...dayData,
+                hours: Number(decimalHours.toFixed(6))
+            };
+            if (newDayData.hours === 0 && !newDayData.transportOnly) {
+                delete timesheetData[dateKey];
+            } else {
+                timesheetData[dateKey] = newDayData;
+            }
+            localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
+            renderCalendar();
+        }
+
+        function toggleTransportOnly(dateKey) {
+            const dayData = getDayData(dateKey);
+            const newDayData = {
+                ...dayData,
+                transportOnly: !dayData.transportOnly
+            };
+            if (newDayData.hours === 0 && !newDayData.transportOnly) {
+                delete timesheetData[dateKey];
+            } else {
+                timesheetData[dateKey] = newDayData;
+            }
+            localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
+            renderCalendar();
+        }
+
+        function initPeriod() {
+            const now = new Date();
+            let year = now.getFullYear();
+            let month = now.getMonth();
+            
+            // If we are before the 20th, the period started the previous month
+            if (now.getDate() < 20) {
+                month -= 1;
+                if (month < 0) {
+                    month = 11;
+                    year -= 1;
+                }
+            }
+            currentDate = new Date(year, month, 20);
+            renderCalendar();
+        }
+
+        function goToToday() {
+            const today = new Date();
+            let year = today.getFullYear();
+            let month = today.getMonth();
+            if (today.getDate() < 20) {
+                month--;
+                if (month < 0) {
+                    month = 11;
+                    year--;
+                }
+            }
+            currentDate = new Date(year, month, 20);
+            renderCalendar();
+
+            setTimeout(() => {
+                const todayCells = document.querySelectorAll('.day-card.today');
+                if (todayCells.length > 0) {
+                    const todayCell = todayCells[0];
+                    todayCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    todayCell.style.transition = 'all 0.3s';
+                    todayCell.style.transform = 'scale(1.02)';
+                    todayCell.style.boxShadow = '0 0 0 3px var(--primary)';
+                    setTimeout(() => {
+                        todayCell.style.transform = '';
+                        todayCell.style.boxShadow = '';
+                    }, 600);
+
+                    showMessage(`📅 ${monthNames[today.getMonth()]} ${today.getFullYear()} - Jour ${today.getDate()}`);
+                } else {
+                    showMessage("📅 Calendrier mis à jour", false);
+                }
+            }, 200);
+        }
+
+        function changeMonth(offset) {
+            currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 20);
+            renderCalendar();
+        }
+
+        function resetPeriod() {
+            if (confirm('Supprimer toutes les heures de la période en cours ?')) {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const nextMonth = (month + 1) % 12;
+                const nextYear = month === 11 ? year + 1 : year;
+                const periodStart = new Date(year, month, 20);
+                const periodEnd = new Date(nextYear, nextMonth, 20);
+
+                for (let key in timesheetData) {
+                    const [y, m, d] = key.split('-').map(Number);
+                    const date = new Date(y, m - 1, d);
+                    if (date >= periodStart && date <= periodEnd) {
+                        delete timesheetData[key];
+                    }
+                }
+                localStorage.setItem('timesheet_period_data', JSON.stringify(timesheetData));
+                renderCalendar();
+                showMessage("✅ Période réinitialisée");
+            }
+        }
+
+        function exportCSV() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const nextMonth = (month + 1) % 12;
+            const nextYear = month === 11 ? year + 1 : year;
+            const periodStart = new Date(year, month, 20);
+            const periodEnd = new Date(nextYear, nextMonth, 20);
+
+            let csv = "Date,Heures,Total Heures (DH),Transport (DH),Total Jour (DH)\n";
+            let current = new Date(periodStart);
+            while (current <= periodEnd) {
+                const key = formatDateKey(current.getFullYear(), current.getMonth(), current.getDate());
+                const dayData = getDayData(key);
+                const hours = dayData.hours;
+                const formattedHours = formatDecimalHoursToDisplay(hours) || '0';
+                const hoursPay = hours * HOURLY_RATE;
+                const transport = (hours > 0 || dayData.transportOnly) ? DAILY_TRANSPORT : 0;
+                const total = hoursPay + transport;
+                csv += `${key},${formattedHours},${hoursPay.toFixed(2)},${transport},${total.toFixed(2)}\n`;
+                current.setDate(current.getDate() + 1);
+            }
+
+            // Android Integration: Check if window.AndroidApp exists and call native shareCSV
+            if (window.AndroidApp) {
+                window.AndroidApp.shareCSV(csv, `pointage_${monthNames[month]}_${year}.csv`);
+            } else {
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `pointage_${monthNames[month]}_${year}.csv`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+                showMessage("📥 Export CSV terminé");
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeToggle');
+            if (html.getAttribute('data-theme') === 'light') {
+                html.setAttribute('data-theme', 'dark');
+                btn.innerHTML = '☀️ Clair';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light');
+                btn.innerHTML = '🌙 Sombre';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const nextMonth = (month + 1) % 12;
+            const nextYear = month === 11 ? year + 1 : year;
+            
+            document.getElementById('monthTitle').innerHTML = `${monthNames[month]} - ${monthNames[nextMonth]} ${year}`;
+
+            const periodStart = new Date(year, month, 20);
+            const periodEnd = new Date(nextYear, nextMonth, 20);
+
+            const days = [];
+            let curr = new Date(periodStart);
+            while (curr <= periodEnd) {
+                days.push(new Date(curr));
+                curr.setDate(curr.getDate() + 1);
+            }
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            let totalHoursPeriod = 0;
+            let workedDaysPeriod = 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const shortDays = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
+            const shortMonths = ['janv.', 'févr.', 'mars', 'avril', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+            days.forEach(date => {
+                const cellYear = date.getFullYear();
+                const cellMonth = date.getMonth();
+                const dayNumber = date.getDate();
+                const dateKey = formatDateKey(cellYear, cellMonth, dayNumber);
+                const dayData = getDayData(dateKey);
+                const hours = dayData.hours;
+                const transportOnly = dayData.transportOnly;
+
+                const hasTransport = hours > 0 || transportOnly;
+
+                totalHoursPeriod += hours;
+                if (hasTransport) workedDaysPeriod++;
+
+                const isToday = (cellYear === today.getFullYear() && cellMonth === today.getMonth() && dayNumber === today.getDate());
+
+                const transport = hasTransport ? DAILY_TRANSPORT : 0;
+                const dailyTotal = Number(((hours * HOURLY_RATE) + transport).toFixed(2));
+
+                const dayOfWeekStr = shortDays[date.getDay()];
+                const monthStr = shortMonths[cellMonth];
+
+                const cell = document.createElement('div');
+                cell.className = `day-card ${isToday ? 'today' : ''} ${hasTransport ? 'active' : ''}`;
+
+                cell.innerHTML = `
+                    <div class="day-card-header">
+                        <div class="day-date-group">
+                            <span class="day-date-pill">${dayNumber} ${monthStr}</span>
+                            <span class="day-name">${dayOfWeekStr}</span>
+                        </div>
+                        ${hasTransport ? `<span class="day-total-pill">${dailyTotal} DH</span>` : ''}
+                    </div>
+                    
+                    <div class="day-card-body">
+                        <div class="input-label">Heures travaillées</div>
+                        <div class="hours-control-group">
+                            <button onclick="updateHour('${dateKey}', -0.5)">−</button>
+                            <input type="text" inputmode="decimal" class="hours-value-input" value="${formatDecimalHoursToDisplay(hours)}" placeholder="0" onchange="setCustomHour('${dateKey}', this.value)" />
+                            <button onclick="updateHour('${dateKey}', 0.5)">+</button>
+                        </div>
+                        
+                        <div class="transport-row">
+                            <span class="transport-label">Transport:</span>
+                            <span class="transport-value">${hasTransport ? transport + ' DH' : '-'}</span>
+                        </div>
+                        
+                        <hr class="card-divider" />
+                        
+                        <button 
+                            class="btn-transport-toggle ${transportOnly ? 'active' : ''}" 
+                            onclick="toggleTransportOnly('${dateKey}')"
+                            ${hours > 0 ? 'disabled' : ''}
+                        >
+                            🚗 ${transportOnly ? 'Transport Seul Actif' : 'Ajouter Transport Seul'}
+                        </button>
+                    </div>
+                `;
+
+                grid.appendChild(cell);
+            });
+
+            const totalHoursPay = totalHoursPeriod * HOURLY_RATE;
+            const totalTransport = workedDaysPeriod * DAILY_TRANSPORT;
+            const grandTotal = totalHoursPay + totalTransport;
+
+            document.getElementById('statHours').innerText = formatDecimalHoursToDisplay(totalHoursPeriod) || '0';
+            document.getElementById('statDays').innerText = workedDaysPeriod;
+            document.getElementById('statTransport').innerText = totalTransport.toLocaleString('fr-FR') + ' DH';
+            document.getElementById('statTotal').innerText = Number(grandTotal.toFixed(2)).toLocaleString('fr-FR') + ' DH';
+        }
+
+        document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
+        document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
+        document.getElementById('todayBtn').addEventListener('click', () => goToToday());
+        document.getElementById('resetBtn').addEventListener('click', () => resetPeriod());
+        document.getElementById('exportBtn').addEventListener('click', () => exportCSV());
+        document.getElementById('themeToggle').addEventListener('click', () => toggleTheme());
+
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.getElementById('themeToggle').innerHTML = '☀️ Clair';
+        }
+
+        initPeriod();
+    </script>
+</body>
+
+</html>

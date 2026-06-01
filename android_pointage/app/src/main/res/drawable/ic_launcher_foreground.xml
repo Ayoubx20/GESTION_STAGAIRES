@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Background Circle for Contrast -->
+    <path
+        android:fillColor="#312E81"
+        android:pathData="M54,54m-38,0a38,38 0,1 1,76 0a38,38 0,1 1,-76 0" />
+
+    <!-- ID Card Base (Rounded Rect) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,36h32c3.3,0 6,2.7 6,6v24c0,3.3 -2.7,6 -6,6H38c-3.3,0 -6,-2.7 -6,-6V42c0,-3.3 2.7,-6 6,-6z" />
+
+    <!-- ID Card Header/Stripe -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M32,42v4h44v-4c0,-3.3 -2.7,-6 -6,-6H38c-3.3,0 -6,2.7 -6,6z" />
+
+    <!-- User Avatar - Head -->
+    <path
+        android:fillColor="#E0E7FF"
+        android:pathData="M54,56m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+
+    <!-- User Avatar - Body -->
+    <path
+        android:fillColor="#E0E7FF"
+        android:pathData="M44,68c0,-3.3 4,-6 10,-6s10,2.7 10,6H44z" />
+
+    <!-- Success Checkmark Badge (Circle) -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M72,66m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0" />
+
+    <!-- Checkmark Sign -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M68,66l3,3l5,-5" />
+</vector>

@@ -376,41 +376,236 @@ const Timesheet = () => {
     saveData(newData);
   };
 
-  const exportData = (format) => {
-    const monthData = [];
+  // ── Pure-JS Excel (.xlsx) export ──────────────────────────────────────────
+  // Builds a minimal but valid Office Open XML workbook with no external deps.
+  const exportToExcel = () => {
+    const headers = ['Date', 'Heures', 'Frais Transport (DH)', 'Total Jour (DH)'];
+    const rows = [];
+
     periodDays.forEach(date => {
-      const year = date.getFullYear();
+      const year  = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+      const day   = String(date.getDate()).padStart(2, '0');
       const dateKey = `${year}-${month}-${day}`;
-
-      const dayData = getDayData(dateKey);
-      const hours = dayData.hours;
+      const dayData  = getDayData(dateKey);
+      const hours    = dayData.hours;
       const transport = (hours > 0 || dayData.transportOnly) ? 200 : 0;
-      const total = (hours * 700) + transport;
-
-      monthData.push({
-        Date: dateKey,
-        Heures: formatDecimalHoursToDisplay(hours) || '0',
-        "Frais Transport (DH)": transport,
-        "Total Jour (DH)": Number(total.toFixed(2))
-      });
+      const total    = Number(((hours * 700) + transport).toFixed(2));
+      rows.push([dateKey, formatDecimalHoursToDisplay(hours) || '0', transport, total]);
     });
 
-    if (format === 'csv') {
-      const headers = ["Date", "Heures", "Frais Transport (DH)", "Total Jour (DH)"];
-      const csvContent = "data:text/csv;charset=utf-8,"
-        + headers.join(",") + "\n"
-        + monthData.map(row => `${row.Date},${row.Heures},${row["Frais Transport (DH)"]},${row["Total Jour (DH)"]}`).join("\n");
+    // Shared-strings XML
+    const allStrings = [...headers];
+    rows.forEach(r => r.forEach(c => { if (typeof c === 'string') allStrings.push(c); }));
+    const uniqueStrings = [...new Set(allStrings)];
+    const sIdx = (s) => uniqueStrings.indexOf(s);
 
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `timesheet_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else if (format === 'json') {
+    const sharedStringsXml =
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ` +
+      `count="${allStrings.length}" uniqueCount="${uniqueStrings.length}">` +
+      uniqueStrings.map(s => `<si><t>${s.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</t></si>`).join('') +
+      `</sst>`;
+
+    // Styles XML – bold for header row
+    const stylesXml =
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+      `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font>` +
+      `<font><b/><sz val="11"/><name val="Calibri"/></font></fonts>` +
+      `<fills count="2"><fill><patternFill patternType="none"/></fill>` +
+      `<fill><patternFill patternType="gray125"/></fill></fills>` +
+      `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>` +
+      `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
+      `<cellXfs count="2">` +
+      `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+      `<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"/>` +
+      `</cellXfs></styleSheet>`;
+
+    // Sheet XML
+    const colLetters = ['A','B','C','D'];
+    let sheetRows = '';
+    // Header row (row 1) – bold style index 1
+    sheetRows += `<row r="1">`;
+    headers.forEach((h, ci) => {
+      sheetRows += `<c r="${colLetters[ci]}1" t="s" s="1"><v>${sIdx(h)}</v></c>`;
+    });
+    sheetRows += `</row>`;
+    // Data rows
+    rows.forEach((row, ri) => {
+      const rowNum = ri + 2;
+      sheetRows += `<row r="${rowNum}">`;
+      row.forEach((cell, ci) => {
+        if (typeof cell === 'string') {
+          sheetRows += `<c r="${colLetters[ci]}${rowNum}" t="s"><v>${sIdx(cell)}</v></c>`;
+        } else {
+          sheetRows += `<c r="${colLetters[ci]}${rowNum}"><v>${cell}</v></c>`;
+        }
+      });
+      sheetRows += `</row>`;
+    });
+
+    const sheetXml =
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+      `<cols>` +
+      `<col min="1" max="1" width="14" customWidth="1"/>` +
+      `<col min="2" max="2" width="10" customWidth="1"/>` +
+      `<col min="3" max="3" width="22" customWidth="1"/>` +
+      `<col min="4" max="4" width="18" customWidth="1"/>` +
+      `</cols>` +
+      `<sheetData>${sheetRows}</sheetData></worksheet>`;
+
+    // Workbook XML
+    const workbookXml =
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ` +
+      `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
+      `<sheets><sheet name="Pointage" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+
+    // Relationship files
+    const wbRelsXml =
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>` +
+      `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>` +
+      `<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
+      `</Relationships>`;
+
+    const relsXml =
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>` +
+      `</Relationships>`;
+
+    const contentTypesXml =
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+      `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+      `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+      `<Default Extension="xml" ContentType="application/xml"/>` +
+      `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
+      `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
+      `<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>` +
+      `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>` +
+      `</Types>`;
+
+    // ── Build ZIP (OOXML is a ZIP archive) ─────────────────────────────────
+    // Minimal ZIP builder (store compression, no deflate needed for small files)
+    const enc = new TextEncoder();
+    const toBytes = (s) => enc.encode(s);
+
+    const crc32 = (buf) => {
+      let c = 0xFFFFFFFF;
+      const table = crc32.table || (crc32.table = (() => {
+        const t = new Uint32Array(256);
+        for (let i = 0; i < 256; i++) {
+          let v = i;
+          for (let j = 0; j < 8; j++) v = (v & 1) ? (0xEDB88320 ^ (v >>> 1)) : (v >>> 1);
+          t[i] = v;
+        }
+        return t;
+      })());
+      for (let i = 0; i < buf.length; i++) c = table[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+      return (c ^ 0xFFFFFFFF) >>> 0;
+    };
+
+    const u16le = (n) => { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, n, true); return b; };
+    const u32le = (n) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n, true); return b; };
+    const concat = (...arrs) => { const total = arrs.reduce((s, a) => s + a.length, 0); const out = new Uint8Array(total); let off = 0; arrs.forEach(a => { out.set(a, off); off += a.length; }); return out; };
+
+    const files = [
+      { name: '[Content_Types].xml',           data: toBytes(contentTypesXml) },
+      { name: '_rels/.rels',                   data: toBytes(relsXml) },
+      { name: 'xl/workbook.xml',              data: toBytes(workbookXml) },
+      { name: 'xl/_rels/workbook.xml.rels',   data: toBytes(wbRelsXml) },
+      { name: 'xl/worksheets/sheet1.xml',     data: toBytes(sheetXml) },
+      { name: 'xl/sharedStrings.xml',         data: toBytes(sharedStringsXml) },
+      { name: 'xl/styles.xml',               data: toBytes(stylesXml) },
+    ];
+
+    const localHeaders = [];
+    let offset = 0;
+    const centralDir = [];
+
+    files.forEach(({ name, data }) => {
+      const nameBytes = enc.encode(name);
+      const crc = crc32(data);
+      const size = data.length;
+      const lh = concat(
+        new Uint8Array([0x50,0x4B,0x03,0x04]),  // local file header sig
+        u16le(20),        // version needed
+        u16le(0),         // flags
+        u16le(0),         // compression (store)
+        u16le(0),         // mod time
+        u16le(0),         // mod date
+        u32le(crc),
+        u32le(size),
+        u32le(size),
+        u16le(nameBytes.length),
+        u16le(0),         // extra length
+        nameBytes,
+        data
+      );
+      localHeaders.push(lh);
+      centralDir.push({ name: nameBytes, crc, size, offset });
+      offset += lh.length;
+    });
+
+    const cdEntries = centralDir.map(({ name: nb, crc, size, offset: off }) =>
+      concat(
+        new Uint8Array([0x50,0x4B,0x01,0x02]),
+        u16le(20), u16le(20), u16le(0), u16le(0),
+        u16le(0),  u16le(0),
+        u32le(crc),
+        u32le(size), u32le(size),
+        u16le(nb.length),
+        u16le(0), u16le(0), u16le(0), u16le(0),
+        u32le(0),
+        u32le(off),
+        nb
+      )
+    );
+
+    const cdBytes   = concat(...cdEntries);
+    const cdOffset  = offset;
+    const eocd = concat(
+      new Uint8Array([0x50,0x4B,0x05,0x06]),
+      u16le(0), u16le(0),
+      u16le(files.length), u16le(files.length),
+      u32le(cdBytes.length),
+      u32le(cdOffset),
+      u16le(0)
+    );
+
+    const zip = concat(...localHeaders, cdBytes, eocd);
+    const blob = new Blob([zip], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `pointage_${currentDate.getFullYear()}_${String(currentDate.getMonth() + 1).padStart(2,'0')}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Fichier Excel téléchargé !');
+  };
+
+  // Legacy exportData kept for JSON export only
+  const exportData = (format) => {
+    if (format === 'excel') { exportToExcel(); return; }
+    if (format === 'json') {
+      const monthData = [];
+      periodDays.forEach(date => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+        const dayData = getDayData(dateKey);
+        const hours = dayData.hours;
+        const transport = (hours > 0 || dayData.transportOnly) ? 200 : 0;
+        const total = Number(((hours * 700) + transport).toFixed(2));
+        monthData.push({ Date: dateKey, Heures: formatDecimalHoursToDisplay(hours) || '0', "Frais Transport (DH)": transport, "Total Jour (DH)": total });
+      });
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(monthData, null, 2));
       const link = document.createElement("a");
       link.setAttribute("href", dataStr);
@@ -603,9 +798,12 @@ const Timesheet = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <button onClick={() => exportData('csv')} className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-lg text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          <button
+            onClick={exportToExcel}
+            className="inline-flex items-center px-3 py-2 border border-emerald-300 dark:border-emerald-700 shadow-sm text-sm font-medium rounded-lg text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+          >
             <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-            CSV
+            Excel
           </button>
         </div>
       </div>

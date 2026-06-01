@@ -161,20 +161,18 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Mise à jour lastLogin sans hook
-    await User.updateOne(
-      { _id: user._id },
-      { $set: { lastLogin: new Date() } }
-    );
-
+    // Parallelize: update lastLogin + fetch/create settings simultaneously
+    const UserSettings = require('../models/UserSettings');
     const token = generateToken(user._id);
 
-    // Fetch user settings
-    const UserSettings = require('../models/UserSettings');
-    let settings = await UserSettings.findOne({ user: user._id });
-    if (!settings) {
-      settings = await UserSettings.create({ user: user._id });
-    }
+    const [, settings] = await Promise.all([
+      User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } }),
+      UserSettings.findOneAndUpdate(
+        { user: user._id },
+        { $setOnInsert: { user: user._id } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      )
+    ]);
 
     const cookieOptions = {
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -197,8 +195,8 @@ exports.login = async (req, res) => {
         isApproved: user.isApproved,
         isActive: user.isActive,
         settings: {
-          language: settings.language,
-          theme: settings.theme
+          language: settings?.language,
+          theme: settings?.theme
         }
       }
     });
@@ -227,12 +225,13 @@ exports.getMe = async (req, res) => {
       });
     }
 
-    // Fetch user settings
+    // Fetch user settings (upsert in one round-trip)
     const UserSettings = require('../models/UserSettings');
-    let settings = await UserSettings.findOne({ user: user._id });
-    if (!settings) {
-      settings = await UserSettings.create({ user: user._id });
-    }
+    const settings = await UserSettings.findOneAndUpdate(
+      { user: user._id },
+      { $setOnInsert: { user: user._id } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     res.json({
       success: true,
