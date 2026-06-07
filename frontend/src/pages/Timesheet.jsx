@@ -209,8 +209,8 @@ const Timesheet = () => {
 
   const incrementHour = (dateKey) => {
     const dayData = getDayData(dateKey);
-    const currentHours = tempHours[dateKey] !== undefined 
-      ? parseInputToDecimalHours(tempHours[dateKey]) 
+    const currentHours = tempHours[dateKey] !== undefined
+      ? parseInputToDecimalHours(tempHours[dateKey])
       : dayData.hours;
     const currentMinutes = Math.round(currentHours * 60);
     // Aller au prochain multiple de 30 minutes strictement supérieur
@@ -232,8 +232,8 @@ const Timesheet = () => {
 
   const decrementHour = (dateKey) => {
     const dayData = getDayData(dateKey);
-    const currentHours = tempHours[dateKey] !== undefined 
-      ? parseInputToDecimalHours(tempHours[dateKey]) 
+    const currentHours = tempHours[dateKey] !== undefined
+      ? parseInputToDecimalHours(tempHours[dateKey])
       : dayData.hours;
     const currentMinutes = Math.round(currentHours * 60);
     // Aller au précédent multiple de 30 minutes strictement inférieur
@@ -379,24 +379,113 @@ const Timesheet = () => {
   // ── Pure-JS Excel (.xlsx) export ──────────────────────────────────────────
   // Builds a minimal but valid Office Open XML workbook with no external deps.
   const exportToExcel = () => {
-    const headers = ['Date', 'Heures', 'Frais Transport (DH)', 'Total Jour (DH)'];
-    const rows = [];
-
-    periodDays.forEach(date => {
-      const year  = date.getFullYear();
+    // Obtenir les clés actives uniquement pour la période actuellement affichée
+    const activeKeys = periodDays.map(date => {
+      const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day   = String(date.getDate()).padStart(2, '0');
-      const dateKey = `${year}-${month}-${day}`;
-      const dayData  = getDayData(dateKey);
-      const hours    = dayData.hours;
-      const transport = (hours > 0 || dayData.transportOnly) ? 200 : 0;
-      const total    = Number(((hours * 700) + transport).toFixed(2));
-      rows.push([dateKey, formatDecimalHoursToDisplay(hours) || '0', transport, total]);
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }).filter(key => {
+      const dayData = getDayData(key);
+      return dayData.hours > 0 || dayData.transportOnly;
     });
 
-    // Shared-strings XML
+    if (activeKeys.length === 0) {
+      toast.error('Aucune donnée active à exporter pour cette période !');
+      return;
+    }
+
+    const headers = ['Jour', 'Date', 'Heures', 'Montant (DH)'];
+    const frMonths = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+    const formatHoursHHhMM = (H) => {
+      const totalMinutes = Math.round(H * 60);
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+    };
+
+    // Determine which period (20th→20th) a date falls in
+    // Returns {year, month} of the period START (the 20th)
+    const getPeriodStart = (date) => {
+      const y = date.getFullYear();
+      const mo = date.getMonth(); // 0-11
+      const d = date.getDate();
+      if (d <= 20) {
+        // belongs to previous month's 20th period
+        const pm = mo - 1 < 0 ? 11 : mo - 1;
+        const py = mo - 1 < 0 ? y - 1 : y;
+        return { year: py, month: pm };
+      }
+      return { year: y, month: mo };
+    };
+
+    // Group keys by period
+    const periodsMap = new Map();
+    activeKeys.forEach(key => {
+      const parts = key.split('-');
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const date = new Date(year, month, day);
+      const ps = getPeriodStart(date);
+      const pid = `${ps.year}-${String(ps.month).padStart(2, '0')}`;
+      if (!periodsMap.has(pid)) periodsMap.set(pid, { ps, keys: [] });
+      periodsMap.get(pid).keys.push(key);
+    });
+
+    const periodIds = [...periodsMap.keys()].sort();
+
+    // Build rows per period
+    const sheets = []; // { name, rows, grandTotal }
+    periodIds.forEach(pid => {
+      const { ps, keys: pKeys } = periodsMap.get(pid);
+      const startMo = ps.month; // 0-11
+      const startYr = ps.year;
+      const endMo = (startMo + 1) % 12;
+      const endYr = startMo === 11 ? startYr + 1 : startYr;
+      const sheetName = `${frMonths[startMo]}→${frMonths[endMo]} ${endYr}`;
+
+      const rows = [];
+      let grandTotal = 0;
+
+      pKeys.forEach(key => {
+        const p = key.split('-');
+        const y = parseInt(p[0], 10);
+        const mo = parseInt(p[1], 10) - 1;
+        const d = parseInt(p[2], 10);
+        const date = new Date(y, mo, d);
+
+        const dayName = date.toLocaleDateString('fr-FR', { weekday: 'long' });
+        const dayNameCap = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+        const dateStr = `${String(d).padStart(2, '0')}/${String(mo + 1).padStart(2, '0')}/${y}`;
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+        const dayData = getDayData(key);
+        const hours = dayData.hours;
+        const transportOnly = dayData.transportOnly;
+
+        if (hours > 0 || transportOnly) {
+          rows.push([dayNameCap, dateStr, hours, transportOnly, isWeekend]);
+          const hoursPay = Math.round(hours * 700);
+          const dayPriceNum = hoursPay + 200;
+          grandTotal += dayPriceNum;
+        }
+      });
+
+      rows.push(null); // spacer
+      rows.push(['TOTAL', '', '', grandTotal, false]);
+      sheets.push({ name: sheetName, rows, grandTotal });
+    });
+
+    // ── Collect all unique strings across all sheets ──────────────────────
     const allStrings = [...headers];
-    rows.forEach(r => r.forEach(c => { if (typeof c === 'string') allStrings.push(c); }));
+    sheets.forEach(({ rows: sRows }) => {
+      sRows.forEach(row => {
+        if (!row) return;
+        [0, 1, 2, 3].forEach(i => { if (typeof row[i] === 'string' && row[i]) allStrings.push(row[i]); });
+      });
+    });
     const uniqueStrings = [...new Set(allStrings)];
     const sIdx = (s) => uniqueStrings.indexOf(s);
 
@@ -404,72 +493,151 @@ const Timesheet = () => {
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
       `<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ` +
       `count="${allStrings.length}" uniqueCount="${uniqueStrings.length}">` +
-      uniqueStrings.map(s => `<si><t>${s.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</t></si>`).join('') +
+      uniqueStrings.map(s => `<si><t>${s.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</t></si>`).join('') +
       `</sst>`;
 
-    // Styles XML – bold for header row
+    // ── Rich Styles XML ───────────────────────────────────────────────────
     const stylesXml =
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
       `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-      `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font>` +
-      `<font><b/><sz val="11"/><name val="Calibri"/></font></fonts>` +
-      `<fills count="2"><fill><patternFill patternType="none"/></fill>` +
-      `<fill><patternFill patternType="gray125"/></fill></fills>` +
-      `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>` +
+      `<numFmts count="1">` +
+      `<numFmt numFmtId="164" formatCode="#,##0&quot;dh&quot;"/>` +
+      `</numFmts>` +
+      `<fonts count="3">` +
+      `<font><sz val="11"/><name val="Calibri"/><color rgb="FF1F2937"/></font>` +
+      `<font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font>` +
+      `<font><b/><sz val="11"/><name val="Calibri"/><color rgb="FF1F2937"/></font>` +
+      `</fonts>` +
+      `<fills count="7">` +
+      `<fill><patternFill patternType="none"/></fill>` +
+      `<fill><patternFill patternType="gray125"/></fill>` +
+      `<fill><patternFill patternType="solid"><fgColor rgb="FF1E3A5F"/></patternFill></fill>` +
+      `<fill><patternFill patternType="solid"><fgColor rgb="FFE8F0FE"/></patternFill></fill>` +
+      `<fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/></patternFill></fill>` +
+      `<fill><patternFill patternType="solid"><fgColor rgb="FFFFF3E0"/></patternFill></fill>` +
+      `<fill><patternFill patternType="solid"><fgColor rgb="FFD1FAE5"/></patternFill></fill>` +
+      `</fills>` +
+      `<borders count="2">` +
+      `<border><left/><right/><top/><bottom/><diagonal/></border>` +
+      `<border>` +
+      `<left style="thin"><color rgb="FFB0C4DE"/></left>` +
+      `<right style="thin"><color rgb="FFB0C4DE"/></right>` +
+      `<top style="thin"><color rgb="FFB0C4DE"/></top>` +
+      `<bottom style="thin"><color rgb="FFB0C4DE"/></bottom>` +
+      `<diagonal/>` +
+      `</border>` +
+      `</borders>` +
       `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
-      `<cellXfs count="2">` +
+      `<cellXfs count="11">` +
       `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
-      `<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"/>` +
-      `</cellXfs></styleSheet>`;
+      `<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `<xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `<xf numFmtId="0" fontId="2" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+      `<xf numFmtId="164" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `<xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `<xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `<xf numFmtId="164" fontId="2" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      `</cellXfs>` +
+      `</styleSheet>`;
 
-    // Sheet XML
-    const colLetters = ['A','B','C','D'];
-    let sheetRows = '';
-    // Header row (row 1) – bold style index 1
-    sheetRows += `<row r="1">`;
-    headers.forEach((h, ci) => {
-      sheetRows += `<c r="${colLetters[ci]}1" t="s" s="1"><v>${sIdx(h)}</v></c>`;
-    });
-    sheetRows += `</row>`;
-    // Data rows
-    rows.forEach((row, ri) => {
-      const rowNum = ri + 2;
-      sheetRows += `<row r="${rowNum}">`;
-      row.forEach((cell, ci) => {
-        if (typeof cell === 'string') {
-          sheetRows += `<c r="${colLetters[ci]}${rowNum}" t="s"><v>${sIdx(cell)}</v></c>`;
-        } else {
-          sheetRows += `<c r="${colLetters[ci]}${rowNum}"><v>${cell}</v></c>`;
-        }
+    // ── Helper: build one sheet XML from a rows array ─────────────────────
+    const colLetters = ['A', 'B', 'C', 'D'];
+    const buildSheetXml = (rows) => {
+      let sheetRows = '';
+      // Header
+      sheetRows += `<row r="1" ht="20" customHeight="1">`;
+      headers.forEach((h, ci) => {
+        sheetRows += `<c r="${colLetters[ci]}1" t="s" s="1"><v>${sIdx(h)}</v></c>`;
       });
       sheetRows += `</row>`;
-    });
 
-    const sheetXml =
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-      `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-      `<cols>` +
-      `<col min="1" max="1" width="14" customWidth="1"/>` +
-      `<col min="2" max="2" width="10" customWidth="1"/>` +
-      `<col min="3" max="3" width="22" customWidth="1"/>` +
-      `<col min="4" max="4" width="18" customWidth="1"/>` +
-      `</cols>` +
-      `<sheetData>${sheetRows}</sheetData></worksheet>`;
+      let dataRowIdx = 0;
+      rows.forEach((row, ri) => {
+        const rowNum = ri + 2;
+        if (!row) {
+          // spacer
+          sheetRows += `<row r="${rowNum}" ht="8" customHeight="1">`;
+          colLetters.forEach(cl => { sheetRows += `<c r="${cl}${rowNum}" s="6"/>`; });
+          sheetRows += `</row>`;
+          return;
+        }
 
-    // Workbook XML
+        const isTotalRow = row[0] === 'TOTAL';
+        const isWeekend2 = row[4];
+        let styleStd, styleCur;
+        if (isTotalRow) {
+          styleStd = 5;
+          styleCur = 10;
+        } else if (isWeekend2) {
+          styleStd = 4;
+          styleCur = 9;
+        } else {
+          styleStd = dataRowIdx % 2 === 0 ? 2 : 3;
+          styleCur = dataRowIdx % 2 === 0 ? 7 : 8;
+        }
+        if (!isTotalRow) dataRowIdx++;
+
+        sheetRows += `<row r="${rowNum}" ht="18" customHeight="1">`;
+
+        if (isTotalRow) {
+          sheetRows += `<c r="A${rowNum}" t="s" s="${styleStd}"><v>${sIdx('TOTAL')}</v></c>`;
+          sheetRows += `<c r="B${rowNum}" s="${styleStd}"/>`;
+          sheetRows += `<c r="C${rowNum}" s="${styleStd}"/>`;
+          const sumFormula = `SUM(D2:D${rowNum - 2})`;
+          sheetRows += `<c r="D${rowNum}" s="${styleCur}"><f>${sumFormula}</f><v>${row[3]}</v></c>`;
+        } else {
+          sheetRows += `<c r="A${rowNum}" t="s" s="${styleStd}"><v>${sIdx(row[0])}</v></c>`;
+          sheetRows += `<c r="B${rowNum}" t="s" s="${styleStd}"><v>${sIdx(row[1])}</v></c>`;
+          
+          const hoursVal = row[2];
+          sheetRows += `<c r="C${rowNum}" t="n" s="${styleStd}"><v>${hoursVal}</v></c>`;
+
+          const isTransportOnly = row[3];
+          const initialAmount = isTransportOnly ? 200 : (hoursVal * 700 + 200);
+          const formula = isTransportOnly 
+            ? `C${rowNum}*700+200` 
+            : `C${rowNum}*700+IF(C${rowNum}&gt;0,200,0)`;
+          
+          sheetRows += `<c r="D${rowNum}" s="${styleCur}"><f>${formula}</f><v>${initialAmount}</v></c>`;
+        }
+
+        sheetRows += `</row>`;
+      });
+
+      return (
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+        `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+        `<cols>` +
+        `<col min="1" max="1" width="18" customWidth="1"/>` +
+        `<col min="2" max="2" width="16" customWidth="1"/>` +
+        `<col min="3" max="3" width="14" customWidth="1"/>` +
+        `<col min="4" max="4" width="20" customWidth="1"/>` +
+        `</cols>` +
+        `<sheetData>${sheetRows}</sheetData></worksheet>`
+      );
+    };
+
+    // ── Build Workbook, Relationships, Content-Types ──────────────────────
+    const sheetsXmlEntries = sheets.map((s, i) => `<sheet name="${s.name}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('');
     const workbookXml =
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
       `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ` +
       `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
-      `<sheets><sheet name="Pointage" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+      `<sheets>${sheetsXmlEntries}</sheets></workbook>`;
 
-    // Relationship files
+    const wbRelsEntries = sheets.map((s, i) =>
+      `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`
+    ).join('') +
+      `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>` +
+      `<Relationship Id="rId${sheets.length + 2}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`;
+
     const wbRelsXml =
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
       `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
-      `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>` +
-      `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>` +
-      `<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
+      wbRelsEntries +
       `</Relationships>`;
 
     const relsXml =
@@ -478,19 +646,22 @@ const Timesheet = () => {
       `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>` +
       `</Relationships>`;
 
+    const sheetOverrides = sheets.map((s, i) =>
+      `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`
+    ).join('');
+
     const contentTypesXml =
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
       `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
       `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
       `<Default Extension="xml" ContentType="application/xml"/>` +
       `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
-      `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
+      sheetOverrides +
       `<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>` +
       `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>` +
       `</Types>`;
 
-    // ── Build ZIP (OOXML is a ZIP archive) ─────────────────────────────────
-    // Minimal ZIP builder (store compression, no deflate needed for small files)
+    // ── Build ZIP ─────────────────────────────────────────────────────────
     const enc = new TextEncoder();
     const toBytes = (s) => enc.encode(s);
 
@@ -514,37 +685,29 @@ const Timesheet = () => {
     const concat = (...arrs) => { const total = arrs.reduce((s, a) => s + a.length, 0); const out = new Uint8Array(total); let off = 0; arrs.forEach(a => { out.set(a, off); off += a.length; }); return out; };
 
     const files = [
-      { name: '[Content_Types].xml',           data: toBytes(contentTypesXml) },
-      { name: '_rels/.rels',                   data: toBytes(relsXml) },
-      { name: 'xl/workbook.xml',              data: toBytes(workbookXml) },
-      { name: 'xl/_rels/workbook.xml.rels',   data: toBytes(wbRelsXml) },
-      { name: 'xl/worksheets/sheet1.xml',     data: toBytes(sheetXml) },
-      { name: 'xl/sharedStrings.xml',         data: toBytes(sharedStringsXml) },
-      { name: 'xl/styles.xml',               data: toBytes(stylesXml) },
+      { name: '[Content_Types].xml', data: toBytes(contentTypesXml) },
+      { name: '_rels/.rels', data: toBytes(relsXml) },
+      { name: 'xl/workbook.xml', data: toBytes(workbookXml) },
+      { name: 'xl/_rels/workbook.xml.rels', data: toBytes(wbRelsXml) },
+      ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: toBytes(buildSheetXml(s.rows)) })),
+      { name: 'xl/sharedStrings.xml', data: toBytes(sharedStringsXml) },
+      { name: 'xl/styles.xml', data: toBytes(stylesXml) },
     ];
 
     const localHeaders = [];
     let offset = 0;
     const centralDir = [];
 
-    files.forEach(({ name, data }) => {
+    files.forEach(({ name, data: fd }) => {
       const nameBytes = enc.encode(name);
-      const crc = crc32(data);
-      const size = data.length;
+      const crc = crc32(fd);
+      const size = fd.length;
       const lh = concat(
-        new Uint8Array([0x50,0x4B,0x03,0x04]),  // local file header sig
-        u16le(20),        // version needed
-        u16le(0),         // flags
-        u16le(0),         // compression (store)
-        u16le(0),         // mod time
-        u16le(0),         // mod date
-        u32le(crc),
-        u32le(size),
-        u32le(size),
-        u16le(nameBytes.length),
-        u16le(0),         // extra length
-        nameBytes,
-        data
+        new Uint8Array([0x50, 0x4B, 0x03, 0x04]),
+        u16le(20), u16le(0), u16le(0), u16le(0), u16le(0),
+        u32le(crc), u32le(size), u32le(size),
+        u16le(nameBytes.length), u16le(0),
+        nameBytes, fd
       );
       localHeaders.push(lh);
       centralDir.push({ name: nameBytes, crc, size, offset });
@@ -553,41 +716,42 @@ const Timesheet = () => {
 
     const cdEntries = centralDir.map(({ name: nb, crc, size, offset: off }) =>
       concat(
-        new Uint8Array([0x50,0x4B,0x01,0x02]),
-        u16le(20), u16le(20), u16le(0), u16le(0),
-        u16le(0),  u16le(0),
-        u32le(crc),
-        u32le(size), u32le(size),
-        u16le(nb.length),
-        u16le(0), u16le(0), u16le(0), u16le(0),
-        u32le(0),
-        u32le(off),
-        nb
+        new Uint8Array([0x50, 0x4B, 0x01, 0x02]),
+        u16le(20), u16le(20), u16le(0), u16le(0), u16le(0), u16le(0),
+        u32le(crc), u32le(size), u32le(size),
+        u16le(nb.length), u16le(0), u16le(0), u16le(0), u16le(0),
+        u32le(0), u32le(off), nb
       )
     );
 
-    const cdBytes   = concat(...cdEntries);
-    const cdOffset  = offset;
+    const cdBytes = concat(...cdEntries);
+    const cdOffset = offset;
     const eocd = concat(
-      new Uint8Array([0x50,0x4B,0x05,0x06]),
+      new Uint8Array([0x50, 0x4B, 0x05, 0x06]),
       u16le(0), u16le(0),
       u16le(files.length), u16le(files.length),
-      u32le(cdBytes.length),
-      u32le(cdOffset),
+      u32le(cdBytes.length), u32le(cdOffset),
       u16le(0)
     );
 
     const zip = concat(...localHeaders, cdBytes, eocd);
     const blob = new Blob([zip], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url  = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `pointage_${currentDate.getFullYear()}_${String(currentDate.getMonth() + 1).padStart(2,'0')}.xlsx`;
+
+    let downloadName = `pointage_${new Date().getFullYear()}`;
+    if (sheets.length > 0) {
+      const cleanName = sheets[0].name.replace('→', '_').replace(/\s+/g, '_');
+      downloadName = `pointage_${cleanName}`;
+    }
+    link.download = `${downloadName}.xlsx`;
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success('Fichier Excel téléchargé !');
+    toast.success(`Fichier Excel téléchargé ! (${sheets.length} période${sheets.length > 1 ? 's' : ''})`);
   };
 
   // Legacy exportData kept for JSON export only
@@ -633,8 +797,8 @@ const Timesheet = () => {
     const dateKey = `${year}-${month}-${dayStr}`;
 
     const dayData = getDayData(dateKey);
-    const numHours = tempHours[dateKey] !== undefined 
-      ? parseInputToDecimalHours(tempHours[dateKey]) 
+    const numHours = tempHours[dateKey] !== undefined
+      ? parseInputToDecimalHours(tempHours[dateKey])
       : dayData.hours;
     const transportOnly = dayData.transportOnly;
 
@@ -657,8 +821,8 @@ const Timesheet = () => {
         key={dateKey}
         data-today={isTodayInThisPeriod ? "true" : "false"}
         className={`p-4 rounded-xl border ${hasTransport
-            ? 'bg-green-50/60 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-            : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
+          ? 'bg-green-50/60 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+          : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
           } ${isTodayInThisPeriod
             ? 'ring-2 ring-indigo-500 dark:ring-indigo-400 shadow-lg'
             : ''
@@ -725,13 +889,12 @@ const Timesheet = () => {
           <button
             onClick={() => toggleTransportOnly(dateKey)}
             disabled={numHours > 0}
-            className={`w-full py-1.5 px-2 rounded-lg text-xs font-bold border transition-all ${
-              transportOnly
+            className={`w-full py-1.5 px-2 rounded-lg text-xs font-bold border transition-all ${transportOnly
                 ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
                 : numHours > 0
                   ? 'bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-800/40 dark:text-gray-600 dark:border-gray-800 cursor-not-allowed'
                   : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+              }`}
           >
             🚗 {transportOnly ? 'Transport Seul Actif' : 'Ajouter Transport Seul'}
           </button>
