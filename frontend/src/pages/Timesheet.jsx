@@ -398,6 +398,14 @@ const Timesheet = () => {
     const headers = ['Jour', 'Date', 'Heures', 'Montant (DH)'];
     const frMonths = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
+    // Format decimal hours as e.g. "02h30"
+    const fmtHours = (H) => {
+      const totalMin = Math.round(H * 60);
+      const hh = Math.floor(totalMin / 60);
+      const mm = totalMin % 60;
+      return `${String(hh).padStart(2, '0')}h${String(mm).padStart(2, '0')}`;
+    };
+
     const startMo = currentDate.getMonth();
     const endMo = (startMo + 1) % 12;
     const endYr = startMo === 11 ? currentDate.getFullYear() + 1 : currentDate.getFullYear();
@@ -422,14 +430,21 @@ const Timesheet = () => {
       const hours = dayData.hours;
       const transportOnly = dayData.transportOnly;
 
-      rows.push([dayNameCap, dateStr, hours, transportOnly, isWeekend]);
+      const hoursFormatted = transportOnly && hours === 0 ? '00h00' : fmtHours(hours);
       const hoursPay = Math.round(hours * 700);
       const dayPriceNum = hoursPay + 200;
       grandTotal += dayPriceNum;
+
+      let montant = '';
+      if (transportOnly && hours === 0) montant = '200dh';
+      else montant = `${hoursPay}dh+200dh`;
+
+      // row: [Jour, Date, HeuresStr, MontantStr, isWeekend]
+      rows.push([dayNameCap, dateStr, hoursFormatted, montant, isWeekend]);
     });
 
     rows.push(null); // spacer
-    rows.push(['TOTAL', '', '', grandTotal, false]);
+    rows.push(['TOTAL', '', '', `${grandTotal}dh`, false]);
     const sheets = [{ name: sheetName, rows, grandTotal }];
 
     // ── Collect all unique strings across all sheets ──────────────────────
@@ -437,7 +452,8 @@ const Timesheet = () => {
     sheets.forEach(({ rows: sRows }) => {
       sRows.forEach(row => {
         if (!row) return;
-        [0, 1, 2, 3].forEach(i => { if (typeof row[i] === 'string' && row[i]) allStrings.push(row[i]); });
+        // All 4 columns are strings now — skip empty strings
+        [0, 1, 2, 3].forEach(i => { if (typeof row[i] === 'string' && row[i] !== '') allStrings.push(row[i]); });
       });
     });
     const uniqueStrings = [...new Set(allStrings)];
@@ -501,22 +517,6 @@ const Timesheet = () => {
       });
       sheetRows += `</row>`;
 
-      // Pre-collect terms for total formula
-      const terms = [];
-      rows.forEach((row, ri) => {
-        const rowNum = ri + 2;
-        if (!row) return;
-        const isTotalRow = row[0] === 'TOTAL';
-        if (isTotalRow) return;
-
-        const isTransportOnly = row[3];
-        if (isTransportOnly) {
-          terms.push(`(C${rowNum}*700+200)`);
-        } else {
-          terms.push(`(C${rowNum}*700+IF(C${rowNum}&gt;0,200,0))`);
-        }
-      });
-
       let dataRowIdx = 0;
       rows.forEach((row, ri) => {
         const rowNum = ri + 2;
@@ -538,34 +538,19 @@ const Timesheet = () => {
 
         sheetRows += `<row r="${rowNum}" ht="18" customHeight="1">`;
 
-        if (isTotalRow) {
-          sheetRows += `<c r="A${rowNum}" t="s" s="${rowStyle}"><v>${sIdx('TOTAL')}</v></c>`;
-          sheetRows += `<c r="B${rowNum}" s="${rowStyle}"/>`;
-          sheetRows += `<c r="C${rowNum}" s="${rowStyle}"/>`;
-          
-          const totalFormula = `(${terms.join('+')})&amp;"dh"`;
-          sheetRows += `<c r="D${rowNum}" t="str" s="${rowStyle}"><f>${totalFormula}</f><v>${row[3]}dh</v></c>`;
-        } else {
-          sheetRows += `<c r="A${rowNum}" t="s" s="${rowStyle}"><v>${sIdx(row[0])}</v></c>`;
-          sheetRows += `<c r="B${rowNum}" t="s" s="${rowStyle}"><v>${sIdx(row[1])}</v></c>`;
-          
-          const hoursVal = row[2];
-          sheetRows += `<c r="C${rowNum}" t="n" s="${rowStyle}"><v>${hoursVal}</v></c>`;
-
-          const isTransportOnly = row[3];
-          let initialAmount = '';
-          let formula = '';
-          
-          if (isTransportOnly) {
-            initialAmount = isWeekend2 ? '200dh' : '+200dh';
-            formula = `IF(C${rowNum}&gt;0, (C${rowNum}*700) &amp; "dh+200dh", "${isWeekend2 ? '200dh' : '+200dh'}")`;
+        // All columns are shared-string values now
+        [0, 1, 2, 3].forEach((i) => {
+          const cl = colLetters[i];
+          const val = row[i];
+          // Only write shared-string cell if value is a non-empty string with a valid index
+          if (typeof val === 'string' && val !== '') {
+            const idx = sIdx(val);
+            if (idx >= 0) sheetRows += `<c r="${cl}${rowNum}" t="s" s="${rowStyle}"><v>${idx}</v></c>`;
+            else sheetRows += `<c r="${cl}${rowNum}" s="${rowStyle}"/>`;
           } else {
-            initialAmount = `${Math.round(hoursVal * 700)}dh+200dh`;
-            formula = `IF(C${rowNum}&gt;0, (C${rowNum}*700) &amp; "dh+200dh", "")`;
+            sheetRows += `<c r="${cl}${rowNum}" s="${rowStyle}"/>`;
           }
-
-          sheetRows += `<c r="D${rowNum}" t="str" s="${rowStyle}"><f>${formula}</f><v>${initialAmount}</v></c>`;
-        }
+        });
 
         sheetRows += `</row>`;
       });
