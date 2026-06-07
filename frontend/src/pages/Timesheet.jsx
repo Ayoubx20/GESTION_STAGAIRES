@@ -398,85 +398,39 @@ const Timesheet = () => {
     const headers = ['Jour', 'Date', 'Heures', 'Montant (DH)'];
     const frMonths = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
-    const formatHoursHHhMM = (H) => {
-      const totalMinutes = Math.round(H * 60);
-      const h = Math.floor(totalMinutes / 60);
-      const m = totalMinutes % 60;
-      return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
-    };
+    const startMo = currentDate.getMonth();
+    const endMo = (startMo + 1) % 12;
+    const endYr = startMo === 11 ? currentDate.getFullYear() + 1 : currentDate.getFullYear();
+    const sheetName = `${frMonths[startMo]}→${frMonths[endMo]} ${endYr}`;
 
-    // Determine which period (20th→20th) a date falls in
-    // Returns {year, month} of the period START (the 20th)
-    const getPeriodStart = (date) => {
-      const y = date.getFullYear();
-      const mo = date.getMonth(); // 0-11
-      const d = date.getDate();
-      if (d <= 20) {
-        // belongs to previous month's 20th period
-        const pm = mo - 1 < 0 ? 11 : mo - 1;
-        const py = mo - 1 < 0 ? y - 1 : y;
-        return { year: py, month: pm };
-      }
-      return { year: y, month: mo };
-    };
+    const rows = [];
+    let grandTotal = 0;
 
-    // Group keys by period
-    const periodsMap = new Map();
     activeKeys.forEach(key => {
-      const parts = key.split('-');
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const date = new Date(year, month, day);
-      const ps = getPeriodStart(date);
-      const pid = `${ps.year}-${String(ps.month).padStart(2, '0')}`;
-      if (!periodsMap.has(pid)) periodsMap.set(pid, { ps, keys: [] });
-      periodsMap.get(pid).keys.push(key);
+      const p = key.split('-');
+      const y = parseInt(p[0], 10);
+      const mo = parseInt(p[1], 10) - 1;
+      const d = parseInt(p[2], 10);
+      const date = new Date(y, mo, d);
+
+      const dayName = date.toLocaleDateString('fr-FR', { weekday: 'long' });
+      const dayNameCap = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+      const dateStr = `${String(d).padStart(2, '0')}/${String(mo + 1).padStart(2, '0')}/${y}`;
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+      const dayData = getDayData(key);
+      const hours = dayData.hours;
+      const transportOnly = dayData.transportOnly;
+
+      rows.push([dayNameCap, dateStr, hours, transportOnly, isWeekend]);
+      const hoursPay = Math.round(hours * 700);
+      const dayPriceNum = hoursPay + 200;
+      grandTotal += dayPriceNum;
     });
 
-    const periodIds = [...periodsMap.keys()].sort();
-
-    // Build rows per period
-    const sheets = []; // { name, rows, grandTotal }
-    periodIds.forEach(pid => {
-      const { ps, keys: pKeys } = periodsMap.get(pid);
-      const startMo = ps.month; // 0-11
-      const startYr = ps.year;
-      const endMo = (startMo + 1) % 12;
-      const endYr = startMo === 11 ? startYr + 1 : startYr;
-      const sheetName = `${frMonths[startMo]}→${frMonths[endMo]} ${endYr}`;
-
-      const rows = [];
-      let grandTotal = 0;
-
-      pKeys.forEach(key => {
-        const p = key.split('-');
-        const y = parseInt(p[0], 10);
-        const mo = parseInt(p[1], 10) - 1;
-        const d = parseInt(p[2], 10);
-        const date = new Date(y, mo, d);
-
-        const dayName = date.toLocaleDateString('fr-FR', { weekday: 'long' });
-        const dayNameCap = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-        const dateStr = `${String(d).padStart(2, '0')}/${String(mo + 1).padStart(2, '0')}/${y}`;
-        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-
-        const dayData = getDayData(key);
-        const hours = dayData.hours;
-        const transportOnly = dayData.transportOnly;
-
-        if (hours > 0 || transportOnly) {
-          rows.push([dayNameCap, dateStr, hours, transportOnly, isWeekend]);
-          const hoursPay = Math.round(hours * 700);
-          const dayPriceNum = hoursPay + 200;
-          grandTotal += dayPriceNum;
-        }
-      });
-
-      rows.push(null); // spacer
-      rows.push(['TOTAL', '', '', grandTotal, false]);
-      sheets.push({ name: sheetName, rows, grandTotal });
-    });
+    rows.push(null); // spacer
+    rows.push(['TOTAL', '', '', grandTotal, false]);
+    const sheets = [{ name: sheetName, rows, grandTotal }];
 
     // ── Collect all unique strings across all sheets ──────────────────────
     const allStrings = [...headers];
@@ -500,9 +454,6 @@ const Timesheet = () => {
     const stylesXml =
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
       `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-      `<numFmts count="1">` +
-      `<numFmt numFmtId="164" formatCode="#,##0&quot;dh&quot;"/>` +
-      `</numFmts>` +
       `<fonts count="3">` +
       `<font><sz val="11"/><name val="Calibri"/><color rgb="FF1F2937"/></font>` +
       `<font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font>` +
@@ -528,7 +479,7 @@ const Timesheet = () => {
       `</border>` +
       `</borders>` +
       `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
-      `<cellXfs count="11">` +
+      `<cellXfs count="7">` +
       `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
       `<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
       `<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
@@ -536,10 +487,6 @@ const Timesheet = () => {
       `<xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
       `<xf numFmtId="0" fontId="2" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
       `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
-      `<xf numFmtId="164" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
-      `<xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
-      `<xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
-      `<xf numFmtId="164" fontId="2" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
       `</cellXfs>` +
       `</styleSheet>`;
 
@@ -554,6 +501,22 @@ const Timesheet = () => {
       });
       sheetRows += `</row>`;
 
+      // Pre-collect terms for total formula
+      const terms = [];
+      rows.forEach((row, ri) => {
+        const rowNum = ri + 2;
+        if (!row) return;
+        const isTotalRow = row[0] === 'TOTAL';
+        if (isTotalRow) return;
+
+        const isTransportOnly = row[3];
+        if (isTransportOnly) {
+          terms.push(`(C${rowNum}*700+200)`);
+        } else {
+          terms.push(`(C${rowNum}*700+IF(C${rowNum}&gt;0,200,0))`);
+        }
+      });
+
       let dataRowIdx = 0;
       rows.forEach((row, ri) => {
         const rowNum = ri + 2;
@@ -567,41 +530,41 @@ const Timesheet = () => {
 
         const isTotalRow = row[0] === 'TOTAL';
         const isWeekend2 = row[4];
-        let styleStd, styleCur;
-        if (isTotalRow) {
-          styleStd = 5;
-          styleCur = 10;
-        } else if (isWeekend2) {
-          styleStd = 4;
-          styleCur = 9;
-        } else {
-          styleStd = dataRowIdx % 2 === 0 ? 2 : 3;
-          styleCur = dataRowIdx % 2 === 0 ? 7 : 8;
-        }
+        let rowStyle;
+        if (isTotalRow) rowStyle = 5;
+        else if (isWeekend2) rowStyle = 4;
+        else rowStyle = dataRowIdx % 2 === 0 ? 2 : 3;
         if (!isTotalRow) dataRowIdx++;
 
         sheetRows += `<row r="${rowNum}" ht="18" customHeight="1">`;
 
         if (isTotalRow) {
-          sheetRows += `<c r="A${rowNum}" t="s" s="${styleStd}"><v>${sIdx('TOTAL')}</v></c>`;
-          sheetRows += `<c r="B${rowNum}" s="${styleStd}"/>`;
-          sheetRows += `<c r="C${rowNum}" s="${styleStd}"/>`;
-          const sumFormula = `SUM(D2:D${rowNum - 2})`;
-          sheetRows += `<c r="D${rowNum}" s="${styleCur}"><f>${sumFormula}</f><v>${row[3]}</v></c>`;
+          sheetRows += `<c r="A${rowNum}" t="s" s="${rowStyle}"><v>${sIdx('TOTAL')}</v></c>`;
+          sheetRows += `<c r="B${rowNum}" s="${rowStyle}"/>`;
+          sheetRows += `<c r="C${rowNum}" s="${rowStyle}"/>`;
+          
+          const totalFormula = `(${terms.join('+')})&amp;"dh"`;
+          sheetRows += `<c r="D${rowNum}" t="str" s="${rowStyle}"><f>${totalFormula}</f><v>${row[3]}dh</v></c>`;
         } else {
-          sheetRows += `<c r="A${rowNum}" t="s" s="${styleStd}"><v>${sIdx(row[0])}</v></c>`;
-          sheetRows += `<c r="B${rowNum}" t="s" s="${styleStd}"><v>${sIdx(row[1])}</v></c>`;
+          sheetRows += `<c r="A${rowNum}" t="s" s="${rowStyle}"><v>${sIdx(row[0])}</v></c>`;
+          sheetRows += `<c r="B${rowNum}" t="s" s="${rowStyle}"><v>${sIdx(row[1])}</v></c>`;
           
           const hoursVal = row[2];
-          sheetRows += `<c r="C${rowNum}" t="n" s="${styleStd}"><v>${hoursVal}</v></c>`;
+          sheetRows += `<c r="C${rowNum}" t="n" s="${rowStyle}"><v>${hoursVal}</v></c>`;
 
           const isTransportOnly = row[3];
-          const initialAmount = isTransportOnly ? 200 : (hoursVal * 700 + 200);
-          const formula = isTransportOnly 
-            ? `C${rowNum}*700+200` 
-            : `C${rowNum}*700+IF(C${rowNum}&gt;0,200,0)`;
+          let initialAmount = '';
+          let formula = '';
           
-          sheetRows += `<c r="D${rowNum}" s="${styleCur}"><f>${formula}</f><v>${initialAmount}</v></c>`;
+          if (isTransportOnly) {
+            initialAmount = isWeekend2 ? '200dh' : '+200dh';
+            formula = `IF(C${rowNum}&gt;0, (C${rowNum}*700) &amp; "dh+200dh", "${isWeekend2 ? '200dh' : '+200dh'}")`;
+          } else {
+            initialAmount = `${Math.round(hoursVal * 700)}dh+200dh`;
+            formula = `IF(C${rowNum}&gt;0, (C${rowNum}*700) &amp; "dh+200dh", "")`;
+          }
+
+          sheetRows += `<c r="D${rowNum}" t="str" s="${rowStyle}"><f>${formula}</f><v>${initialAmount}</v></c>`;
         }
 
         sheetRows += `</row>`;
