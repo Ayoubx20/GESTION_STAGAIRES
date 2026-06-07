@@ -398,14 +398,6 @@ const Timesheet = () => {
     const headers = ['Jour', 'Date', 'Heures', 'Montant (DH)'];
     const frMonths = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
-    // Format decimal hours as e.g. "02h30"
-    const fmtHours = (H) => {
-      const totalMin = Math.round(H * 60);
-      const hh = Math.floor(totalMin / 60);
-      const mm = totalMin % 60;
-      return `${String(hh).padStart(2, '0')}h${String(mm).padStart(2, '0')}`;
-    };
-
     const startMo = currentDate.getMonth();
     const endMo = (startMo + 1) % 12;
     const endYr = startMo === 11 ? currentDate.getFullYear() + 1 : currentDate.getFullYear();
@@ -413,6 +405,7 @@ const Timesheet = () => {
 
     const rows = [];
     let grandTotal = 0;
+    let grandTotalHours = 0;
 
     activeKeys.forEach(key => {
       const p = key.split('-');
@@ -430,30 +423,25 @@ const Timesheet = () => {
       const hours = dayData.hours;
       const transportOnly = dayData.transportOnly;
 
-      const hoursFormatted = transportOnly && hours === 0 ? '00h00' : fmtHours(hours);
       const hoursPay = Math.round(hours * 700);
-      const dayPriceNum = hoursPay + 200;
-      grandTotal += dayPriceNum;
+      grandTotal += hoursPay + 200;
+      grandTotalHours += hours;
 
-      let montant = '';
-      if (transportOnly && hours === 0) montant = '200dh';
-      else montant = `${hoursPay}dh+200dh`;
-
-      // row: [Jour, Date, HeuresStr, MontantStr, isWeekend]
-      rows.push([dayNameCap, dateStr, hoursFormatted, montant, isWeekend]);
+      // row: [Jour, Date, timeFraction(hours/24), isTransportOnly, isWeekend]
+      rows.push([dayNameCap, dateStr, hours / 24, transportOnly, isWeekend]);
     });
 
     rows.push(null); // spacer
-    rows.push(['TOTAL', '', '', `${grandTotal}dh`, false]);
-    const sheets = [{ name: sheetName, rows, grandTotal }];
+    // TOTAL row — C and D column formulas built in buildSheetXml
+    rows.push(['TOTAL', '', grandTotalHours / 24, null, false]);
+    const sheets = [{ name: sheetName, rows, grandTotal, grandTotalHours }];
 
-    // ── Collect all unique strings across all sheets ──────────────────────
+    // ── Collect unique strings: only Jour (col 0) and Date (col 1) + headers ─
     const allStrings = [...headers];
     sheets.forEach(({ rows: sRows }) => {
       sRows.forEach(row => {
         if (!row) return;
-        // All 4 columns are strings now — skip empty strings
-        [0, 1, 2, 3].forEach(i => { if (typeof row[i] === 'string' && row[i] !== '') allStrings.push(row[i]); });
+        [0, 1].forEach(i => { if (typeof row[i] === 'string' && row[i] !== '') allStrings.push(row[i]); });
       });
     });
     const uniqueStrings = [...new Set(allStrings)];
@@ -467,9 +455,13 @@ const Timesheet = () => {
       `</sst>`;
 
     // ── Rich Styles XML ───────────────────────────────────────────────────
+    // numFmtId 164 = [hh]"h"mm  → displays 02h45 from a time fraction value
     const stylesXml =
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
       `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+      `<numFmts count="1">` +
+      `<numFmt numFmtId="164" formatCode="[hh]&quot;h&quot;mm"/>` +
+      `</numFmts>` +
       `<fonts count="3">` +
       `<font><sz val="11"/><name val="Calibri"/><color rgb="FF1F2937"/></font>` +
       `<font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font>` +
@@ -495,22 +487,59 @@ const Timesheet = () => {
       `</border>` +
       `</borders>` +
       `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
-      `<cellXfs count="7">` +
+      `<cellXfs count="11">` +
+      // 0: default
       `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+      // 1: header (dark blue bg, white bold)
       `<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      // 2: even row light blue
       `<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      // 3: odd row white
       `<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      // 4: weekend yellow
       `<xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      // 5: total green bold
       `<xf numFmtId="0" fontId="2" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      // 6: spacer blank
       `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+      // 7: even row light blue + time format [hh]"h"mm
+      `<xf numFmtId="164" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      // 8: odd row white + time format
+      `<xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      // 9: weekend yellow + time format
+      `<xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
+      // 10: total green bold + time format (unused for total C but kept for completeness)
+      `<xf numFmtId="164" fontId="2" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>` +
       `</cellXfs>` +
       `</styleSheet>`;
 
-    // ── Helper: build one sheet XML from a rows array ─────────────────────
+    // Returns the time-format style index for a given base row style
+    const timeStyle = (s) => s === 2 ? 7 : s === 3 ? 8 : s === 4 ? 9 : s === 5 ? 10 : s;
+
+    // ── Helper: build one sheet XML ───────────────────────────────────────
     const colLetters = ['A', 'B', 'C', 'D'];
-    const buildSheetXml = (rows) => {
+    const buildSheetXml = (rows, sheetGrandTotal, sheetGrandTotalHours) => {
+      // First pass: collect per-row terms for the TOTAL formula
+      const totalTerms = [];
+      const hourCells = [];
+      rows.forEach((row, ri) => {
+        if (!row || row[0] === 'TOTAL') return;
+        const rowNum = ri + 2;
+        hourCells.push(`C${rowNum}`);
+        const isTransportOnly = row[3];
+        if (isTransportOnly) {
+          // transport-only: C is 0, but always 200dh due to transport
+          totalTerms.push(`(ROUND(C${rowNum}*24*700,0)+200)`);
+        } else {
+          totalTerms.push(`(ROUND(C${rowNum}*24*700,0)+IF(C${rowNum}&gt;0,200,0))`);
+        }
+      });
+      const hoursFormula = hourCells.length > 1
+        ? `SUM(${hourCells[0]}:${hourCells[hourCells.length - 1]})`
+        : (hourCells[0] || '0');
+
       let sheetRows = '';
-      // Header
+      // Header row
       sheetRows += `<row r="1" ht="20" customHeight="1">`;
       headers.forEach((h, ci) => {
         sheetRows += `<c r="${colLetters[ci]}1" t="s" s="1"><v>${sIdx(h)}</v></c>`;
@@ -521,7 +550,6 @@ const Timesheet = () => {
       rows.forEach((row, ri) => {
         const rowNum = ri + 2;
         if (!row) {
-          // spacer
           sheetRows += `<row r="${rowNum}" ht="8" customHeight="1">`;
           colLetters.forEach(cl => { sheetRows += `<c r="${cl}${rowNum}" s="6"/>`; });
           sheetRows += `</row>`;
@@ -538,19 +566,38 @@ const Timesheet = () => {
 
         sheetRows += `<row r="${rowNum}" ht="18" customHeight="1">`;
 
-        // All columns are shared-string values now
-        [0, 1, 2, 3].forEach((i) => {
-          const cl = colLetters[i];
-          const val = row[i];
-          // Only write shared-string cell if value is a non-empty string with a valid index
-          if (typeof val === 'string' && val !== '') {
-            const idx = sIdx(val);
-            if (idx >= 0) sheetRows += `<c r="${cl}${rowNum}" t="s" s="${rowStyle}"><v>${idx}</v></c>`;
-            else sheetRows += `<c r="${cl}${rowNum}" s="${rowStyle}"/>`;
+        if (isTotalRow) {
+          // Column A: "TOTAL" label
+          sheetRows += `<c r="A${rowNum}" t="s" s="${rowStyle}"><v>${sIdx('TOTAL')}</v></c>`;
+          // Column B: blank
+          sheetRows += `<c r="B${rowNum}" s="${rowStyle}"/>`;
+          // Column C: total hours (time format)
+          sheetRows += `<c r="C${rowNum}" t="n" s="10"><f>${hoursFormula}</f><v>${sheetGrandTotalHours / 24}</v></c>`;
+          // Column D: dynamic sum formula → "5800dh"
+          const totalF = `(${totalTerms.join('+')}+0)&amp;"dh"`;
+          sheetRows += `<c r="D${rowNum}" t="str" s="${rowStyle}"><f>${totalF}</f><v>${sheetGrandTotal}dh</v></c>`;
+        } else {
+          const isTransportOnly = row[3];
+          const timeFrac = row[2]; // hours / 24
+          const hoursPay = Math.round(timeFrac * 24 * 700);
+
+          // Column A: Jour
+          sheetRows += `<c r="A${rowNum}" t="s" s="${rowStyle}"><v>${sIdx(row[0])}</v></c>`;
+          // Column B: Date
+          sheetRows += `<c r="B${rowNum}" t="s" s="${rowStyle}"><v>${sIdx(row[1])}</v></c>`;
+          // Column C: time fraction (numeric), displayed as [hh]"h"mm by the style
+          sheetRows += `<c r="C${rowNum}" t="n" s="${timeStyle(rowStyle)}"><v>${timeFrac}</v></c>`;
+          // Column D: formula → "350dh+200dh" or "200dh" for transport-only
+          let montantFormula, montantCached;
+          if (isTransportOnly) {
+            montantFormula = `IF(C${rowNum}&gt;0,ROUND(C${rowNum}*24*700,0)&amp;"dh+200dh","200dh")`;
+            montantCached = timeFrac > 0 ? `${hoursPay}dh+200dh` : '200dh';
           } else {
-            sheetRows += `<c r="${cl}${rowNum}" s="${rowStyle}"/>`;
+            montantFormula = `IF(C${rowNum}&gt;0,ROUND(C${rowNum}*24*700,0)&amp;"dh+200dh","")`;
+            montantCached = timeFrac > 0 ? `${hoursPay}dh+200dh` : '';
           }
-        });
+          sheetRows += `<c r="D${rowNum}" t="str" s="${rowStyle}"><f>${montantFormula}</f><v>${montantCached}</v></c>`;
+        }
 
         sheetRows += `</row>`;
       });
@@ -567,6 +614,7 @@ const Timesheet = () => {
         `<sheetData>${sheetRows}</sheetData></worksheet>`
       );
     };
+
 
     // ── Build Workbook, Relationships, Content-Types ──────────────────────
     const sheetsXmlEntries = sheets.map((s, i) => `<sheet name="${s.name}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('');
@@ -637,7 +685,7 @@ const Timesheet = () => {
       { name: '_rels/.rels', data: toBytes(relsXml) },
       { name: 'xl/workbook.xml', data: toBytes(workbookXml) },
       { name: 'xl/_rels/workbook.xml.rels', data: toBytes(wbRelsXml) },
-      ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: toBytes(buildSheetXml(s.rows)) })),
+      ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: toBytes(buildSheetXml(s.rows, s.grandTotal, s.grandTotalHours)) })),
       { name: 'xl/sharedStrings.xml', data: toBytes(sharedStringsXml) },
       { name: 'xl/styles.xml', data: toBytes(stylesXml) },
     ];
