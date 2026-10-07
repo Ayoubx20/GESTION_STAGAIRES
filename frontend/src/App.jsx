@@ -33,9 +33,10 @@ const PendingApprovals = lazy(() => import('./pages/PendingApprovals.jsx'));
 const Evaluations = lazy(() => import('./pages/Evaluations.jsx'));
 const MyDocuments = lazy(() => import('./pages/MyDocuments.jsx'));
 const GlobalSearch = lazy(() => import('./pages/GlobalSearch.jsx'));
-const Quiz = lazy(() => import('./pages/Quiz.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
+const BinaryLab = lazy(() => import('./pages/BinaryLab/index.jsx'));
 const Timesheet = lazy(() => import('./pages/Timesheet.jsx'));
+const AdminTimesheet = lazy(() => import('./pages/AdminTimesheet.jsx'));
 
 // Protected Route
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -88,6 +89,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/registration-pending" element={<RegistrationPending />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/binary" element={<BinaryLab />} />
 
                 {/* ========== ROUTES PROTÉGÉES ========== */}
                 <Route element={
@@ -182,6 +184,13 @@ function App() {
                   <Route path="settings" element={<Settings />} />
                   <Route path="timesheet" element={<Timesheet />} />
 
+                  {/* ===== ADMIN POINTAGE DASHBOARD ===== */}
+                  <Route path="admin-timesheet" element={
+                    <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+                      <AdminTimesheet />
+                    </ProtectedRoute>
+                  } />
+
                   {/* ===== DOCUMENTS STAGIAIRE ===== */}
                   <Route path="my-documents" element={
                     <ProtectedRoute allowedRoles={['intern']}>
@@ -191,9 +200,7 @@ function App() {
 
                   {/* ===== RECHERCHE GLOBALE ===== */}
                   <Route path="search" element={<GlobalSearch />} />
-
-                  {/* ===== TEST INFORMATIQUE ===== */}
-                  <Route path="quiz" element={<Quiz />} />
+                  <Route path="quiz" element={<Navigate to="/binary" replace />} />
                 </Route>
 
                 {/* ========== ROUTE 404 ========== */}

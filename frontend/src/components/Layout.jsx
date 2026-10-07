@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import AIAssistantWidget from './AIAssistantWidget';
 
 const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -58,6 +59,9 @@ const Layout = () => {
           </div>
         </main>
       </div>
+
+      {/* FLOATING AI ASSISTANT WIDGET */}
+      <AIAssistantWidget />
     </div>
   );
 };

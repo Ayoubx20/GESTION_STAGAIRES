@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { taskService } from '../services/tasks';
 import { internService } from '../services/interns';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { getAITaskSuggestions } from '../services/aiService';
+import { ArrowLeftIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 const TaskForm = () => {
@@ -11,6 +12,7 @@ const TaskForm = () => {
   const navigate = useNavigate();
   const { user, isAdmin, isSupervisor } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
   const [interns, setInterns] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
@@ -66,6 +68,31 @@ const TaskForm = () => {
     setFormData({ ...formData, [name]: finalValue });
   };
 
+  const handleGenerateAI = async () => {
+    setAiGenerating(true);
+    toast.loading('Génération de suggestions avec StagIA...', { id: 'ai-task' });
+    try {
+      const suggestions = await getAITaskSuggestions(formData.title || 'Développement Web', 'intermédiaire');
+      if (suggestions && suggestions.length > 0) {
+        const top = suggestions[0];
+        setFormData(prev => ({
+          ...prev,
+          title: top.title || prev.title,
+          description: top.description || prev.description,
+          priority: top.priority || prev.priority,
+          category: top.category || prev.category
+        }));
+        toast.success('Idée de tâche générée par l\'IA !', { id: 'ai-task' });
+      } else {
+        toast.error('Aucune suggestion disponible.', { id: 'ai-task' });
+      }
+    } catch (err) {
+      toast.error('Erreur lors de la génération IA.', { id: 'ai-task' });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -92,21 +119,34 @@ const TaskForm = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       {/* Header */}
-      <div className="flex items-center space-x-6 p-8 bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-[2.5rem] border border-white/50 dark:border-white/10 shadow-xl animate-fade-in-up">
-        <button
-          onClick={() => navigate('/tasks')}
-          className="group flex items-center justify-center w-12 h-12 bg-white dark:bg-gray-700/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:border-primary-200 transition-all duration-300"
-        >
-          <ArrowLeftIcon className="w-5 h-5 text-gray-400 group-hover:text-primary-600 transition-all" />
-        </button>
-        <div>
-          <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.3em] mb-1 block">
-             Mission Designer • {id ? 'Modification' : 'Création'}
-          </span>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-            {id ? 'Modifier la mission' : 'Nouvelle mission'}
-          </h1>
+      <div className="flex items-center justify-between p-8 bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-[2.5rem] border border-white/50 dark:border-white/10 shadow-xl animate-fade-in-up">
+        <div className="flex items-center space-x-6">
+          <button
+            onClick={() => navigate('/tasks')}
+            className="group flex items-center justify-center w-12 h-12 bg-white dark:bg-gray-700/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:border-primary-200 transition-all duration-300"
+          >
+            <ArrowLeftIcon className="w-5 h-5 text-gray-400 group-hover:text-primary-600 transition-all" />
+          </button>
+          <div>
+            <span className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.3em] mb-1 block">
+               Mission Designer • {id ? 'Modification' : 'Création'}
+            </span>
+            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              {id ? 'Modifier la mission' : 'Nouvelle mission'}
+            </h1>
+          </div>
         </div>
+
+        {/* AI Generator Button */}
+        <button
+          type="button"
+          onClick={handleGenerateAI}
+          disabled={aiGenerating}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-purple-500/20 hover:scale-105 transition-all active:scale-95 disabled:opacity-50"
+        >
+          <SparklesIcon className="w-4 h-4 text-yellow-300 animate-spin" style={{ animationDuration: '4s' }} />
+          <span>{aiGenerating ? 'Génération...' : 'Suggérer avec l\'IA'}</span>
+        </button>
       </div>
 
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-2xl rounded-[3rem] shadow-2xl border border-white/40 dark:border-white/10 p-8 md:p-12 animate-scale-in">
@@ -212,7 +252,7 @@ const TaskForm = () => {
             </div>
           </div>
 
-          {/* Progress Slider - New Upgrade */}
+          {/* Progress Slider */}
           <div className="p-8 bg-primary-500/5 rounded-3xl border border-primary-500/10">
             <div className="flex justify-between items-center mb-6">
                <label className="text-sm font-black text-gray-700 dark:text-white uppercase tracking-widest">Avancement de la mission</label>

@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /d d:\\\\GESTION && where python 2>nul \\|\\| where py 2>nul \\|\\| echo \"NO_PY_FOUND\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

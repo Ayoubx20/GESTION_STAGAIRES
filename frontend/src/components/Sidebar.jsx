@@ -19,8 +19,9 @@ import {
   UserGroupIcon,
   ClockIcon,
   DocumentTextIcon,
-  AcademicCapIcon,
-  XMarkIcon
+  XMarkIcon,
+  BeakerIcon,
+  TableCellsIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
@@ -31,23 +32,23 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
 
   // Navigation pour ADMIN et SUPERVISEUR
   const adminSupervisorNavigation = [
-    { name: 'Pointage', to: '/timesheet', icon: ClockIcon },
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
     { name: t('interns'), to: '/interns', icon: UsersIcon },
     { name: 'Équipes', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
+    { name: 'Pointage', to: '/timesheet', icon: TableCellsIcon },
     { name: 'Rapports', to: '/reports', icon: ChartBarIcon },
-    { name: 'Test Informatique', to: '/quiz', icon: AcademicCapIcon },
+    { name: 'Binary Lab', to: '/binary', icon: BeakerIcon },
   ];
 
   // Navigation pour STAGIAIRE
   const internNavigation = [
-    { name: 'Pointage', to: '/timesheet', icon: ClockIcon },
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
     { name: 'Mon Équipe', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
+    { name: 'Pointage', to: '/timesheet', icon: TableCellsIcon },
     { name: 'Mes Documents', to: '/my-documents', icon: DocumentTextIcon },
-    { name: 'Test Informatique', to: '/quiz', icon: AcademicCapIcon },
+    { name: 'Binary Lab', to: '/binary', icon: BeakerIcon },
   ];
 
   // Navigation ADMIN SEULEMENT

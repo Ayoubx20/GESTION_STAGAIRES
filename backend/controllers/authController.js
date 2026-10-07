@@ -170,7 +170,7 @@ exports.login = async (req, res) => {
       UserSettings.findOneAndUpdate(
         { user: user._id },
         { $setOnInsert: { user: user._id } },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       )
     ]);
 
@@ -230,7 +230,7 @@ exports.getMe = async (req, res) => {
     const settings = await UserSettings.findOneAndUpdate(
       { user: user._id },
       { $setOnInsert: { user: user._id } },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     );
 
     res.json({

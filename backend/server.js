@@ -12,7 +12,7 @@ const cookieParser = require('cookie-parser');
 // 1. CONFIGURATION DES VARIABLES D'ENVIRONNEMENT
 // ============================================
 // On charge .env s'il existe (utile en local). Sur Render, les variables sont injectées directement.
-dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const isProd = process.env.NODE_ENV === 'production';
 console.log(`🌍 Mode: ${isProd ? 'PRODUCTION' : 'DÉVELOPPEMENT'}`);
@@ -181,7 +181,8 @@ try {
     app.use('/api/settings', require('./routes/settings'));
     app.use('/api/teams', require('./routes/teams'));
     app.use('/api/timesheet', require('./routes/timesheet'));
-    
+    app.use('/api/ai', require('./routes/ai'));
+
     // Pour l'upload de CV/Documents
     app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
     app.use('/api/uploads', require('./routes/uploads'));

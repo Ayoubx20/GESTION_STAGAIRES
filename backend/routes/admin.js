@@ -120,7 +120,7 @@ router.put('/approve-intern/:id', auth, isAdmin, async (req, res) => {
     await SiteStat.findOneAndUpdate(
       { monthId },
       { $inc: { approvedCount: 1 } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     res.json({
@@ -172,7 +172,7 @@ router.put('/reject-intern/:id', auth, isAdmin, async (req, res) => {
           cvName: 'Non fourni'
         }
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // L'utilisateur reste isApproved: false et isActive: false
