@@ -48,7 +48,7 @@ app.use(helmet({
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "blob:"],
             connectSrc: [
-                "'self'", 
+                "'self'",
                 "https://quizzapi.jomoreschi.fr",
                 "https://gestion-brown.vercel.app/api",
                 "https://gestion-stagiaire-backend.onrender.com"
@@ -94,11 +94,11 @@ const corsOptions = {
     origin: function (origin, callback) {
         // Autoriser Postman ou les outils locaux (!origin)
         if (!origin || !isProd) return callback(null, true);
-        
+
         // Autoriser si l'origine est dans la liste ou finit par .vercel.app
-        const isAllowed = allowedOrigins.some(ao => origin.startsWith(ao)) || 
-                         allowedOrigins.includes(origin) ||
-                         origin.endsWith('.vercel.app');
+        const isAllowed = allowedOrigins.some(ao => origin.startsWith(ao)) ||
+            allowedOrigins.includes(origin) ||
+            origin.endsWith('.vercel.app');
 
         if (isAllowed) {
             callback(null, true);
@@ -122,7 +122,7 @@ app.use(cors(corsOptions));
 const connectDB = async () => {
     try {
         console.log('🔄 Connexion à MongoDB...');
-        
+
         // Mongoose 6+ n'a plus besoin de useNewUrlParser ou useUnifiedTopology
         const conn = await mongoose.connect(process.env.MONGODB_URI, {
             serverSelectionTimeoutMS: 15000,
@@ -133,7 +133,7 @@ const connectDB = async () => {
 
         mongoose.connection.on('error', err => console.error('❌ Erreur MongoDB:', err));
         mongoose.connection.on('disconnected', () => console.warn('⚠️ MongoDB déconnecté.'));
-        
+
     } catch (error) {
         console.error('❌ Erreur de connexion MongoDB:', error.message);
         if (isProd) {

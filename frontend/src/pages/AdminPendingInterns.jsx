@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-
+// ayoub aboujama
 const AdminPendingInterns = () => {
   const [pendingInterns, setPendingInterns] = useState([]);
   const [loading, setLoading] = useState(true);
