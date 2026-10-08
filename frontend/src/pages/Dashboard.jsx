@@ -236,13 +236,15 @@ const Dashboard = () => {
              'Voici un aperçu de vos activités.'}
           </p>
         </div>
-        <Link
-          to="/timesheet"
-          className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:self-auto"
-        >
-          <ClockIcon className="h-5 w-5" aria-hidden="true" />
-          Pointage
-        </Link>
+        {user?.pageAccess !== 'dashboard' && (
+          <Link
+            to="/timesheet"
+            className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:self-auto"
+          >
+            <ClockIcon className="h-5 w-5" aria-hidden="true" />
+            Pointage
+          </Link>
+        )}
       </div>
 
       {/* Stats Grid - Affichage différent selon le rôle */}

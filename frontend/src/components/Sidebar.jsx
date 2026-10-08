@@ -29,6 +29,10 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const restrictedPagePath = user?.role === 'admin' ? null : {
+    dashboard: '/dashboard',
+    timesheet: '/timesheet'
+  }[user?.pageAccess];
 
   // Navigation pour ADMIN et SUPERVISEUR
   const adminSupervisorNavigation = [
@@ -68,7 +72,8 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
   };
 
   // Choisir la navigation en fonction du rôle
-  const navigation = isIntern ? internNavigation : adminSupervisorNavigation;
+  const navigation = (isIntern ? internNavigation : adminSupervisorNavigation)
+    .filter((item) => !restrictedPagePath || item.to === restrictedPagePath);
 
   return (
     <div className={`relative w-full h-full bg-white dark:bg-gray-800 shadow-xl lg:shadow-lg transition-all duration-300 flex flex-col`}>
@@ -159,7 +164,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
           {!collapsed && (theme === 'dark' ? 'Mode clair' : 'Mode sombre')}
         </button>
 
-        {bottomNavigation.map((item) => (
+        {!restrictedPagePath && bottomNavigation.map((item) => (
           <NavLink
             key={item.name}
             to={item.to}

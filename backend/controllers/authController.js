@@ -192,6 +192,7 @@ exports.login = async (req, res) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        pageAccess: user.pageAccess || 'all',
         isApproved: user.isApproved,
         isActive: user.isActive,
         settings: {
@@ -241,6 +242,7 @@ exports.getMe = async (req, res) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        pageAccess: user.pageAccess || 'all',
         phone: user.phone,
         isActive: user.isActive,
         isApproved: user.isApproved,

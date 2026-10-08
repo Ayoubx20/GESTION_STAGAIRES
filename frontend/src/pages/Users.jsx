@@ -147,6 +147,18 @@ const Users = () => {
     }
   };
 
+  const handlePageAccessChange = async (user, pageAccess) => {
+    try {
+      await api.patch(`/users/${user._id}/page-access`, { pageAccess });
+      setUsers(currentUsers => currentUsers.map(currentUser =>
+        currentUser._id === user._id ? { ...currentUser, pageAccess } : currentUser
+      ));
+      toast.success('Pages autorisées mises à jour');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour des pages autorisées');
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -251,6 +263,7 @@ const Users = () => {
                   <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Utilisateur</th>
                   <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Contact</th>
                   <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Rôle</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Pages autorisées</th>
                   <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Statut</th>
                   <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">Date d'inscription</th>
                   <th className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white w-32">Actions</th>
@@ -279,6 +292,19 @@ const Users = () => {
                     </td>
                     <td className="px-6 py-4">
                       {getRoleBadge(user.role)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={user.pageAccess || 'all'}
+                        onChange={(event) => handlePageAccessChange(user, event.target.value)}
+                        disabled={user.role === 'admin'}
+                        aria-label={`Pages autorisées pour ${user.firstName} ${user.lastName}`}
+                        className="w-48 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800"
+                      >
+                        <option value="all">Toutes les pages</option>
+                        <option value="dashboard">Dashboard uniquement</option>
+                        <option value="timesheet">Pointage uniquement</option>
+                      </select>
                     </td>
                     <td className="px-6 py-4">
                       {user.isActive ? (

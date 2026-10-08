@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+const ProtectedRoute = ({ children, allowedRoles = [], allowPublic = false }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -14,14 +14,26 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     );
   }
 
+  if (user) {
+    const pageAccess = user.role === 'admin' ? 'all' : user.pageAccess || 'all';
+    if (pageAccess !== 'all') {
+      const allowedPath = pageAccess === 'timesheet' ? '/timesheet' : '/dashboard';
+      if (location.pathname !== allowedPath) {
+        return <Navigate to={allowedPath} replace />;
+      }
+    }
+  }
+
   // Public routes that should bypass auth check
   const publicPaths = ['/', '/login', '/register', '/registration-pending', '/forgot-password'];
   if (publicPaths.some((path) => location.pathname === path)) {
-    // If children are provided (e.g., element prop), render them; otherwise render Outlet for nested routes
     return children ? <>{children}</> : <Outlet />;
   }
 
-  // Not logged in - redirect to login
+  if (!user && allowPublic) {
+    return children ? <>{children}</> : <Outlet />;
+  }
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }

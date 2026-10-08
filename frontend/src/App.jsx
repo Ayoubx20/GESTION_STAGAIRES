@@ -89,7 +89,11 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/registration-pending" element={<RegistrationPending />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/binary" element={<BinaryLab />} />
+                <Route path="/binary" element={
+                  <ProtectedRoute allowPublic>
+                    <BinaryLab />
+                  </ProtectedRoute>
+                } />
 
                 {/* ========== ROUTES PROTÉGÉES ========== */}
                 <Route element={

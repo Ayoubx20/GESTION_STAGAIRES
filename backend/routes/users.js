@@ -218,6 +218,33 @@ router.patch('/:id/status', auth, async (req, res) => {
   }
 });
 
+router.patch('/:id/page-access', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Non autorisé' });
+    }
+
+    const { pageAccess } = req.body;
+    if (!['all', 'dashboard', 'timesheet'].includes(pageAccess)) {
+      return res.status(400).json({ success: false, message: 'Accès de page invalide' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+    if (user.role === 'admin') {
+      return res.status(400).json({ success: false, message: 'Les administrateurs gardent l’accès à toutes les pages' });
+    }
+
+    user.pageAccess = pageAccess;
+    await user.save();
+    res.json({ success: true, user: { _id: user._id, pageAccess: user.pageAccess } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // @desc    Get user settings
 // @route   GET /api/users/:id/settings
 // @access  Private/Admin
