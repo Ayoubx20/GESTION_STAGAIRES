@@ -225,7 +225,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="flex justify-between items-center opacity-0 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+      <div className="flex flex-col gap-4 opacity-0 animate-fade-in-up sm:flex-row sm:items-center sm:justify-between" style={{ animationDelay: '0.1s' }}>
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-primary-600 via-primary-500 to-indigo-600 dark:from-primary-400 dark:to-indigo-300 leading-tight">
             👋 Bonjour, {user?.firstName} {user?.lastName}!
@@ -236,6 +236,13 @@ const Dashboard = () => {
              'Voici un aperçu de vos activités.'}
           </p>
         </div>
+        <Link
+          to="/timesheet"
+          className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:self-auto"
+        >
+          <ClockIcon className="h-5 w-5" aria-hidden="true" />
+          Pointage
+        </Link>
       </div>
 
       {/* Stats Grid - Affichage différent selon le rôle */}
