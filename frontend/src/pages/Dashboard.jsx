@@ -29,6 +29,7 @@ import {
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import { hasPageAccess } from '../data/pageAccess';
 
 ChartJS.register(
   CategoryScale,
@@ -236,7 +237,7 @@ const Dashboard = () => {
              'Voici un aperçu de vos activités.'}
           </p>
         </div>
-        {user?.pageAccess !== 'dashboard' && (
+        {hasPageAccess(user, '/timesheet') && (
           <Link
             to="/timesheet"
             className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:self-auto"

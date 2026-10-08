@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getAllowedPagePath, hasPageAccess } from '../data/pageAccess';
 
 const ProtectedRoute = ({ children, allowedRoles = [], allowPublic = false }) => {
   const { user, loading } = useAuth();
@@ -15,12 +16,8 @@ const ProtectedRoute = ({ children, allowedRoles = [], allowPublic = false }) =>
   }
 
   if (user) {
-    const pageAccess = user.role === 'admin' ? 'all' : user.pageAccess || 'all';
-    if (pageAccess !== 'all') {
-      const allowedPath = pageAccess === 'timesheet' ? '/timesheet' : '/dashboard';
-      if (location.pathname !== allowedPath) {
-        return <Navigate to={allowedPath} replace />;
-      }
+    if (!hasPageAccess(user, location.pathname)) {
+      return <Navigate to={getAllowedPagePath(user)} replace />;
     }
   }
 

@@ -20,6 +20,14 @@ import ErrorMessage from '../components/ErrorMessage';
 import EmptyState from '../components/EmptyState';
 import toast from 'react-hot-toast';
 import PremiumToggle from '../components/PremiumToggle';
+import { getConfiguredPageKeys, getPageAccessOptions } from '../data/pageAccess';
+
+const getPageAccessSummary = (user) => {
+  if (user.role === 'admin' || !user.pageAccess || user.pageAccess === 'all') return 'Toutes les pages';
+  const selectedCount = getConfiguredPageKeys(user).length;
+  const totalCount = getPageAccessOptions(user.role).length;
+  return `${selectedCount} sur ${totalCount} pages`;
+};
 
 const Users = () => {
   const { isAdmin } = useAuth();
@@ -28,8 +36,11 @@ const Users = () => {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showPageAccessModal, setShowPageAccessModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [pageAccessUser, setPageAccessUser] = useState(null);
+  const [selectedPages, setSelectedPages] = useState([]);
   const [userSettings, setUserSettings] = useState(null);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -147,15 +158,33 @@ const Users = () => {
     }
   };
 
-  const handlePageAccessChange = async (user, pageAccess) => {
+  const handleOpenPageAccess = (user) => {
+    setPageAccessUser(user);
+    setSelectedPages(getConfiguredPageKeys(user));
+    setShowPageAccessModal(true);
+  };
+
+  const handleSavePageAccess = async () => {
+    if (!pageAccessUser) return;
+    if (selectedPages.length === 0) {
+      toast.error('Autorisez au moins une page pour cet utilisateur');
+      return;
+    }
+
+    const availablePages = getPageAccessOptions(pageAccessUser.role);
+    const grantsAllPages = selectedPages.length === availablePages.length;
+    const pageAccess = grantsAllPages ? 'all' : 'custom';
+    const allowedPages = grantsAllPages ? [] : selectedPages;
+
     try {
-      await api.patch(`/users/${user._id}/page-access`, { pageAccess });
+      await api.patch(`/users/${pageAccessUser._id}/page-access`, { pageAccess, allowedPages });
       setUsers(currentUsers => currentUsers.map(currentUser =>
-        currentUser._id === user._id ? { ...currentUser, pageAccess } : currentUser
+        currentUser._id === pageAccessUser._id ? { ...currentUser, pageAccess, allowedPages } : currentUser
       ));
-      toast.success('Pages autorisées mises à jour');
+      setShowPageAccessModal(false);
+      toast.success('Accès aux pages mis à jour');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour des pages autorisées');
+      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour des accès');
     }
   };
 
@@ -294,17 +323,22 @@ const Users = () => {
                       {getRoleBadge(user.role)}
                     </td>
                     <td className="px-6 py-4">
-                      <select
-                        value={user.pageAccess || 'all'}
-                        onChange={(event) => handlePageAccessChange(user, event.target.value)}
-                        disabled={user.role === 'admin'}
-                        aria-label={`Pages autorisées pour ${user.firstName} ${user.lastName}`}
-                        className="w-48 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-800"
-                      >
-                        <option value="all">Toutes les pages</option>
-                        <option value="dashboard">Dashboard uniquement</option>
-                        <option value="timesheet">Pointage uniquement</option>
-                      </select>
+                      <div className="flex items-center gap-3">
+                        <span className="whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          {user.role === 'admin' ? 'Accès administrateur' : getPageAccessSummary(user)}
+                        </span>
+                        {user.role !== 'admin' && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenPageAccess(user)}
+                            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/30"
+                            aria-label={`Configurer les pages de ${user.firstName} ${user.lastName}`}
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                            Configurer
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       {user.isActive ? (
@@ -486,6 +520,84 @@ const Users = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {showPageAccessModal && pageAccessUser && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setShowPageAccessModal(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="page-access-title"
+            className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="border-b border-gray-200 px-6 py-5 dark:border-gray-700">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Gestion des accès</p>
+              <h2 id="page-access-title" className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+                Pages autorisées
+              </h2>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {pageAccessUser.firstName} {pageAccessUser.lastName} · {pageAccessUser.role === 'intern' ? 'Stagiaire' : 'Superviseur'}
+              </p>
+            </header>
+
+            <div className="space-y-4 overflow-y-auto px-6 py-5">
+              {(() => {
+                const pageOptions = getPageAccessOptions(pageAccessUser.role);
+                const allPagesSelected = selectedPages.length === pageOptions.length;
+
+                return (
+                  <>
+                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-primary-200 bg-primary-50/70 p-4 dark:border-primary-800 dark:bg-primary-900/20">
+                      <input
+                        type="checkbox"
+                        checked={allPagesSelected}
+                        onChange={(event) => setSelectedPages(event.target.checked ? pageOptions.map((page) => page.key) : [])}
+                        className="mt-0.5 h-4 w-4 accent-primary-600"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-gray-900 dark:text-white">Toutes les pages</span>
+                        <span className="mt-0.5 block text-xs text-gray-600 dark:text-gray-400">Accès complet aux pages disponibles pour ce rôle</span>
+                      </span>
+                    </label>
+
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {pageOptions.map((page) => (
+                        <label key={page.key} className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">
+                          <input
+                            type="checkbox"
+                            checked={selectedPages.includes(page.key)}
+                            onChange={() => setSelectedPages((currentPages) => currentPages.includes(page.key)
+                              ? currentPages.filter((key) => key !== page.key)
+                              : [...currentPages, page.key])}
+                            className="mt-0.5 h-4 w-4 accent-primary-600"
+                          />
+                          <span>
+                            <span className="block text-sm font-medium text-gray-900 dark:text-white">{page.label}</span>
+                            <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{page.description}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedPages.length === 0 && (
+                      <p className="text-sm text-red-600 dark:text-red-400">Sélectionnez au moins une page avant d’enregistrer.</p>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            <footer className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+              <button type="button" onClick={() => setShowPageAccessModal(false)} className="btn-secondary">Annuler</button>
+              <button type="button" onClick={handleSavePageAccess} disabled={selectedPages.length === 0} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">
+                Enregistrer les accès
+              </button>
+            </footer>
+          </section>
         </div>
       )}
 

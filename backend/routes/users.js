@@ -3,6 +3,11 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const User = require('../models/User');
 
+const rolePageAccess = {
+  intern: ['dashboard', 'teams', 'tasks', 'timesheet', 'my-documents', 'search', 'binary', 'profile', 'settings'],
+  supervisor: ['dashboard', 'interns', 'teams', 'tasks', 'timesheet', 'admin-timesheet', 'reports', 'search', 'binary', 'profile', 'settings']
+};
+
 // Get all users (admin only)
 router.get('/', auth, async (req, res) => {
   try {
@@ -122,11 +127,20 @@ router.put('/:id', auth, async (req, res) => {
 
     if (!user) return res.status(404).json({ success: false, message: 'Non trouvé' });
 
+    const previousRole = user.role;
     user.firstName = firstName || user.firstName;
     user.lastName = lastName || user.lastName;
     user.email = email || user.email;
     user.role = role || user.role;
     user.phone = phone || user.phone;
+
+    if (user.role !== previousRole && user.pageAccess === 'custom') {
+      const rolePages = rolePageAccess[user.role] || [];
+      user.allowedPages = user.allowedPages.filter((page) => rolePages.includes(page));
+      if (user.allowedPages.length === 0) {
+        user.pageAccess = 'all';
+      }
+    }
 
     if (password && password.trim() !== '') {
       user.password = password;
@@ -224,8 +238,8 @@ router.patch('/:id/page-access', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
 
-    const { pageAccess } = req.body;
-    if (!['all', 'dashboard', 'timesheet'].includes(pageAccess)) {
+    const { pageAccess, allowedPages = [] } = req.body;
+    if (!['all', 'custom', 'dashboard', 'timesheet'].includes(pageAccess)) {
       return res.status(400).json({ success: false, message: 'Accès de page invalide' });
     }
 
@@ -237,9 +251,19 @@ router.patch('/:id/page-access', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Les administrateurs gardent l’accès à toutes les pages' });
     }
 
+    let pagesToSave = [];
+    if (pageAccess === 'custom') {
+      const rolePages = rolePageAccess[user.role] || [];
+      if (!Array.isArray(allowedPages) || allowedPages.length === 0 || allowedPages.some((page) => !rolePages.includes(page))) {
+        return res.status(400).json({ success: false, message: 'Sélection de pages invalide pour ce rôle' });
+      }
+      pagesToSave = [...new Set(allowedPages)];
+    }
+
     user.pageAccess = pageAccess;
+    user.allowedPages = pagesToSave;
     await user.save();
-    res.json({ success: true, user: { _id: user._id, pageAccess: user.pageAccess } });
+    res.json({ success: true, user: { _id: user._id, pageAccess: user.pageAccess, allowedPages: user.allowedPages } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }

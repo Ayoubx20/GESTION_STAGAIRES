@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { hasPageAccess } from '../data/pageAccess';
 import {
   HomeIcon,
   UsersIcon,
@@ -29,11 +30,6 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const restrictedPagePath = user?.role === 'admin' ? null : {
-    dashboard: '/dashboard',
-    timesheet: '/timesheet'
-  }[user?.pageAccess];
-
   // Navigation pour ADMIN et SUPERVISEUR
   const adminSupervisorNavigation = [
     { name: t('dashboard'), to: '/dashboard', icon: HomeIcon },
@@ -65,6 +61,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
     { name: t('profile'), to: '/profile', icon: UserCircleIcon },
     { name: t('settings'), to: '/settings', icon: Cog6ToothIcon },
   ];
+  const visibleBottomNavigation = bottomNavigation.filter((item) => hasPageAccess(user, item.to));
 
   const handleLogout = () => {
     logout();
@@ -73,7 +70,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
 
   // Choisir la navigation en fonction du rôle
   const navigation = (isIntern ? internNavigation : adminSupervisorNavigation)
-    .filter((item) => !restrictedPagePath || item.to === restrictedPagePath);
+    .filter((item) => hasPageAccess(user, item.to));
 
   return (
     <div className={`relative w-full h-full bg-white dark:bg-gray-800 shadow-xl lg:shadow-lg transition-all duration-300 flex flex-col`}>
@@ -164,7 +161,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
           {!collapsed && (theme === 'dark' ? 'Mode clair' : 'Mode sombre')}
         </button>
 
-        {!restrictedPagePath && bottomNavigation.map((item) => (
+        {visibleBottomNavigation.map((item) => (
           <NavLink
             key={item.name}
             to={item.to}
