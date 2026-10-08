@@ -33,11 +33,14 @@ router.get('/', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { days } = req.body;
-    const timesheet = await Timesheet.findOneAndUpdate(
-      { user: req.user.id },
-      { days },
-      { returnDocument: 'after', upsert: true }
-    );
+    let timesheet = await Timesheet.findOne({ user: req.user.id });
+    if (!timesheet) {
+      timesheet = new Timesheet({ user: req.user.id, days: {} });
+    }
+    timesheet.days = days || {};
+    timesheet.markModified('days');
+    await timesheet.save();
+
     res.json({
       success: true,
       data: timesheet.days

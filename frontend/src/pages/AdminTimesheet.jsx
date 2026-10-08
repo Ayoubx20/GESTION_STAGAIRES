@@ -44,17 +44,19 @@ const toKey = (d) => {
 };
 
 const calcStats = (days, periodDays) => {
-  let hours = 0, transport = 0;
+  let hours = 0, transport = 0, pay = 0;
   periodDays.forEach(d => {
     const key = toKey(d);
     const val = days[key];
     if (!val) return;
     const h = typeof val === 'object' ? (Number(val.hours) || 0) : (parseFloat(val) || 0);
+    const simH = typeof val === 'object' ? (Number(val.simulatedHours) || (val.isSimulated ? Number(val.hours) || 0 : 0)) : 0;
     const tOnly = typeof val === 'object' ? !!val.transportOnly : false;
-    hours += h;
-    if (h > 0 || tOnly) transport += 200;
+    hours += (h + simH);
+    pay += Math.round(h * 700) + (simH * 400);
+    if (h > 0 || simH > 0 || tOnly) transport += 200;
   });
-  const total = Math.round(hours * 700) + transport;
+  const total = pay + transport;
   return { hours, transport, total, workedDays: Math.round(transport / 200) };
 };
 

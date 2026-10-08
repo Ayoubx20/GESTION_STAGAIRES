@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ArrowDownTrayIcon, PlusIcon, MinusIcon, TableCellsIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ArrowDownTrayIcon, PlusIcon, MinusIcon, TableCellsIcon, UsersIcon, SparklesIcon, ClockIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -13,6 +13,11 @@ const Timesheet = () => {
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
   const [tempHours, setTempHours] = useState({});
+
+  // Simulation state (1h = 400 DH)
+  const [showSimModal, setShowSimModal] = useState(false);
+  const [simDaysCount, setSimDaysCount] = useState(1);
+  const [simTargetDate, setSimTargetDate] = useState('');
 
   // Unique key for storage per user (retained for migration check)
   const storageKey = user?._id ? `timesheet_data_${user._id}` : 'timesheet_data';
@@ -106,7 +111,10 @@ const Timesheet = () => {
     // Optimistic update
     setData(newData);
     try {
-      await api.post('/timesheet', { days: newData });
+      const response = await api.post('/timesheet', { days: newData });
+      if (response && response.success && response.data) {
+        setData(response.data);
+      }
     } catch (e) {
       console.error('Error saving timesheet to MongoDB', e);
       toast.error('Erreur lors de la sauvegarde sur le serveur');
@@ -203,11 +211,15 @@ const Timesheet = () => {
 
   const getDayData = (dateKey) => {
     const val = data[dateKey];
-    if (!val) return { hours: 0, transportOnly: false };
+    if (!val) return { hours: 0, simulatedHours: 0, transportOnly: false };
     if (typeof val === 'object') {
-      return { hours: Number(val.hours) || 0, transportOnly: !!val.transportOnly };
+      return {
+        hours: Number(val.hours) || 0,
+        simulatedHours: Number(val.simulatedHours) || (val.isSimulated ? Number(val.hours) || 0 : 0),
+        transportOnly: !!val.transportOnly
+      };
     }
-    return { hours: parseFloat(val) || 0, transportOnly: false };
+    return { hours: parseFloat(val) || 0, simulatedHours: 0, transportOnly: false };
   };
 
   const incrementHour = (dateKey) => {
@@ -248,7 +260,7 @@ const Timesheet = () => {
       hours: Number(newHours.toFixed(6))
     };
     const newData = { ...data };
-    if (newDayData.hours === 0 && !newDayData.transportOnly) {
+    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly) {
       delete newData[dateKey];
     } else {
       newData[dateKey] = newDayData;
@@ -316,6 +328,21 @@ const Timesheet = () => {
         ...prev,
         [dateKey]: val
       }));
+
+      // Immediately sync with data state and backend
+      const decimalHours = parseInputToDecimalHours(val);
+      const dayData = getDayData(dateKey);
+      const newDayData = {
+        ...dayData,
+        hours: Number(decimalHours.toFixed(6))
+      };
+      const newData = { ...data };
+      if (newDayData.hours === 0 && newDayData.simulatedHours === 0 && !newDayData.transportOnly) {
+        delete newData[dateKey];
+      } else {
+        newData[dateKey] = newDayData;
+      }
+      saveData(newData);
     }
   };
 
@@ -338,7 +365,7 @@ const Timesheet = () => {
     };
 
     const newData = { ...data };
-    if (newDayData.hours === 0 && !newDayData.transportOnly) {
+    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly) {
       delete newData[dateKey];
     } else {
       newData[dateKey] = newDayData;
@@ -366,7 +393,7 @@ const Timesheet = () => {
       transportOnly: !dayData.transportOnly
     };
     const newData = { ...data };
-    if (newDayData.hours === 0 && !newDayData.transportOnly) {
+    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly) {
       delete newData[dateKey];
     } else {
       newData[dateKey] = newDayData;
@@ -377,6 +404,69 @@ const Timesheet = () => {
       return copy;
     });
     saveData(newData);
+  };
+
+  const formatDateToKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // ⚡ Simulation Helpers (simulatedHours @ 400 DH/h + automatic 200 DH transport)
+  const incrementSimulatedHour = (dateKey) => {
+    const dayData = getDayData(dateKey);
+    const newSimHours = (dayData.simulatedHours || 0) + 1;
+
+    const newDayData = {
+      ...dayData,
+      simulatedHours: newSimHours
+    };
+    const newData = { ...data, [dateKey]: newDayData };
+    saveData(newData);
+  };
+
+  const decrementSimulatedHour = (dateKey) => {
+    const dayData = getDayData(dateKey);
+    const newSimHours = Math.max(0, (dayData.simulatedHours || 0) - 1);
+
+    const newDayData = {
+      ...dayData,
+      simulatedHours: newSimHours
+    };
+    const newData = { ...data };
+    if (newDayData.hours === 0 && newDayData.simulatedHours === 0 && !newDayData.transportOnly) {
+      delete newData[dateKey];
+    } else {
+      newData[dateKey] = newDayData;
+    }
+    saveData(newData);
+  };
+
+  const applyOneHourSimulation = (dateKey) => {
+    const targetKey = dateKey || formatDateToKey(new Date());
+    incrementSimulatedHour(targetKey);
+    toast.success(`⚡ Simulation 1h (+200 DH transport) ajoutée pour le ${targetKey}`);
+  };
+
+  // ⚡ Fill entire month weekdays with 1h Simulation
+  const fillMonthOneHourSimulation = () => {
+    if (!window.confirm('Voulez-vous simuler 1h pour tous les jours ouvrables (lundi-vendredi) de cette période ?')) {
+      return;
+    }
+    const newData = { ...data };
+    let count = 0;
+    periodDays.forEach(date => {
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        const key = formatDateToKey(date);
+        const existing = getDayData(key);
+        newData[key] = { ...existing, simulatedHours: (existing.simulatedHours || 0) + 1 };
+        count++;
+      }
+    });
+    saveData(newData);
+    toast.success(`⚡ Simulation 1h appliquée à ${count} jours ouvrables !`);
   };
 
   // ── Pure-JS Excel (.xlsx) export ──────────────────────────────────────────
@@ -390,7 +480,7 @@ const Timesheet = () => {
       return `${year}-${month}-${day}`;
     }).filter(key => {
       const dayData = getDayData(key);
-      return dayData.hours > 0 || dayData.transportOnly;
+      return dayData.hours > 0 || dayData.simulatedHours > 0 || dayData.transportOnly;
     });
 
     if (activeKeys.length === 0) {
@@ -799,13 +889,20 @@ const Timesheet = () => {
     const numHours = tempHours[dateKey] !== undefined
       ? parseInputToDecimalHours(tempHours[dateKey])
       : dayData.hours;
+    const simHours = dayData.simulatedHours || 0;
     const transportOnly = dayData.transportOnly;
 
-    const hasTransport = numHours > 0 || transportOnly;
-    const transport = hasTransport ? 200 : 0;
-    const dailyTotal = Number(((numHours * 700) + transport).toFixed(2));
+    const normalPay = Math.round(numHours * 700);
+    const simPay = simHours * 400;
 
-    totalMonthHours += numHours;
+    const hasNormalTransport = numHours > 0 || transportOnly;
+    const hasSimTransport = simHours > 0;
+    const hasTransport = hasNormalTransport || hasSimTransport;
+    const transport = hasTransport ? 200 : 0;
+
+    const dailyTotal = normalPay + simPay + transport;
+
+    totalMonthHours += numHours + simHours;
     totalTransport += transport;
     grandTotal += dailyTotal;
 
@@ -819,7 +916,7 @@ const Timesheet = () => {
       <div
         key={dateKey}
         data-today={isTodayInThisPeriod ? "true" : "false"}
-        className={`p-4 rounded-xl border ${hasTransport
+        className={`p-4 rounded-xl border ${dailyTotal > 0
           ? 'bg-green-50/60 border-green-200 dark:bg-green-900/20 dark:border-green-800'
           : 'bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700'
           } ${isTodayInThisPeriod
@@ -844,12 +941,22 @@ const Timesheet = () => {
           </div>
 
           <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Heures travaillées</label>
-              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-lg p-1">
+            {/* 1. HEURES TRAVAILLÉES SECTION (700 DH/h) */}
+            <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">Heures travaillées</label>
+                {numHours > 0 && (
+                  <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                    {normalPay} DH
+                  </span>
+                )}
+              </div>
+
+              {/* Counter Input for Normal Hours */}
+              <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-1">
                 <button
                   onClick={() => decrementHour(dateKey)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors focus:outline-none"
                 >
                   <MinusIcon className="w-4 h-4" />
                 </button>
@@ -866,36 +973,75 @@ const Timesheet = () => {
                   }}
                   onBlur={() => handleHoursBlur(dateKey)}
                   onKeyDown={(e) => handleHoursKeyDown(dateKey, e)}
-                  className="text-lg font-bold text-gray-900 dark:text-white w-16 text-center bg-transparent border-0 focus:ring-0 focus:outline-none p-0"
+                  className="text-lg font-black text-gray-900 dark:text-white w-16 text-center bg-transparent border-0 focus:ring-0 focus:outline-none p-0"
                 />
                 <button
                   onClick={() => incrementHour(dateKey)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors focus:outline-none"
                 >
                   <PlusIcon className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
+            {/* 2. HEURES SIMULATEUR SECTION (400 DH/h + automatique 200 DH transport) */}
+            <div className="p-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-800/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <SparklesIcon className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+                  <span className="text-xs font-bold text-amber-900 dark:text-amber-300">Simulateur (400 DH/h)</span>
+                </div>
+                {simHours > 0 && (
+                  <span className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400">
+                    {simPay} DH
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded-lg p-1">
+                <button
+                  onClick={() => decrementSimulatedHour(dateKey)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-amber-50 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 shadow-sm hover:bg-amber-100 dark:hover:bg-amber-800/60 transition-colors focus:outline-none font-bold"
+                >
+                  <MinusIcon className="w-4 h-4" />
+                </button>
+                <span className="text-lg font-black text-gray-900 dark:text-white w-16 text-center">
+                  {simHours}h
+                </span>
+                <button
+                  onClick={() => incrementSimulatedHour(dateKey)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-amber-50 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 shadow-sm hover:bg-amber-100 dark:hover:bg-amber-800/60 transition-colors focus:outline-none font-bold"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* 3. TRANSPORT */}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500 dark:text-gray-400">Transport:</span>
-              <span className="font-medium text-gray-700 dark:text-gray-300">{transport} DH</span>
+              <span className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                {transport} DH
+                {hasSimTransport && (
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">(Inclus)</span>
+                )}
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50">
+        <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/50">
           <button
             onClick={() => toggleTransportOnly(dateKey)}
-            disabled={numHours > 0}
-            className={`w-full py-1.5 px-2 rounded-lg text-xs font-bold border transition-all ${transportOnly
-                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                : numHours > 0
-                  ? 'bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-800/40 dark:text-gray-600 dark:border-gray-800 cursor-not-allowed'
-                  : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+            disabled={numHours > 0 || simHours > 0}
+            className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold border transition-all ${transportOnly
+              ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+              : (numHours > 0 || simHours > 0)
+                ? 'bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-800/40 dark:text-gray-600 dark:border-gray-800 cursor-not-allowed'
+                : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
           >
-            🚗 {transportOnly ? 'Transport Seul Actif' : 'Ajouter Transport Seul'}
+            🚗 {transportOnly ? 'Transport Seul Actif' : 'Transport Seul (200 DH)'}
           </button>
         </div>
       </div>
@@ -958,21 +1104,19 @@ const Timesheet = () => {
         <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl w-fit">
           <button
             onClick={() => setActiveTab('my')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${
-              activeTab === 'my'
+            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'my'
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
+              }`}
           >
             <TableCellsIcon className="w-4 h-4" /> Mon Pointage
           </button>
           <button
             onClick={() => setActiveTab('admin')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${
-              activeTab === 'admin'
+            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'admin'
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
+              }`}
           >
             <UsersIcon className="w-4 h-4" /> Vue Admin
           </button>
@@ -984,84 +1128,186 @@ const Timesheet = () => {
         <AdminTimesheet />
       ) : (
         <>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Pointage Mensuel</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Gérez vos heures de travail et frais de transport</p>
-        </div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Pointage Mensuel</h1>
+              <p className="text-gray-500 dark:text-gray-400 mt-1">Gérez vos heures de travail et frais de transport</p>
+            </div>
 
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={exportToExcel}
-            className="inline-flex items-center px-3 py-2 border border-emerald-300 dark:border-emerald-700 shadow-sm text-sm font-medium rounded-lg text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
-          >
-            <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-            Excel
-          </button>
-        </div>
-      </div>
+            <div className="flex flex-wrap items-center gap-2">
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <button onClick={handlePrevMonth} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm transition-all border border-gray-200 dark:border-gray-600">
-            <ChevronLeftIcon className="w-5 h-5" />
-          </button>
 
-          <div className="text-lg font-bold text-gray-900 dark:text-white min-w-[200px] text-center">
-            {startMonth} {startYear} → {endMonth} {endYear}
+              <button
+                onClick={exportToExcel}
+                className="inline-flex items-center px-3.5 py-2 border border-emerald-300 dark:border-emerald-700 shadow-sm text-sm font-medium rounded-xl text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+              >
+                <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                Excel
+              </button>
+            </div>
           </div>
 
-          <button onClick={handleNextMonth} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm transition-all border border-gray-200 dark:border-gray-600">
-            <ChevronRightIcon className="w-5 h-5" />
-          </button>
-        </div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <button onClick={handlePrevMonth} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm transition-all border border-gray-200 dark:border-gray-600">
+                <ChevronLeftIcon className="w-5 h-5" />
+              </button>
 
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={goToToday}
-            className="inline-flex items-center px-4 py-2 border border-green-200 text-green-700 dark:border-green-800/30 dark:text-green-400 bg-green-50 dark:bg-green-900/10 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-xl text-sm font-semibold transition-colors"
-          >
-            📅 Aujourd'hui
-          </button>
-          <button onClick={handleResetMonth} className="inline-flex items-center px-4 py-2 border border-red-200 text-red-600 dark:border-red-800/30 dark:text-red-400 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl text-sm font-semibold transition-colors">
-            <ArrowPathIcon className="w-4 h-4 mr-2" />
-            Réinitialiser le mois
-          </button>
-        </div>
-      </div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white min-w-[200px] text-center">
+                {startMonth} {startYear} → {endMonth} {endYear}
+              </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 dark:shadow-none relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-indigo-100 text-sm font-medium mb-1">Total Heures Travaillées</p>
-            <p className="text-3xl font-black">{formatHoursMinutes(totalMonthHours)}</p>
-            <p className="text-indigo-100 text-sm mt-2">Soit {Number((totalMonthHours * 700).toFixed(2)).toLocaleString('fr-FR')} DH</p>
+              <button onClick={handleNextMonth} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm transition-all border border-gray-200 dark:border-gray-600">
+                <ChevronRightIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={goToToday}
+                className="inline-flex items-center px-4 py-2 border border-green-200 text-green-700 dark:border-green-800/30 dark:text-green-400 bg-green-50 dark:bg-green-900/10 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-xl text-sm font-semibold transition-colors"
+              >
+                📅 Aujourd'hui
+              </button>
+              <button onClick={handleResetMonth} className="inline-flex items-center px-4 py-2 border border-red-200 text-red-600 dark:border-red-800/30 dark:text-red-400 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl text-sm font-semibold transition-colors">
+                <ArrowPathIcon className="w-4 h-4 mr-2" />
+                Réinitialiser le mois
+              </button>
+            </div>
           </div>
-          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
-        </div>
 
-        <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 text-white shadow-lg shadow-amber-200 dark:shadow-none relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-amber-100 text-sm font-medium mb-1">Frais de Transport</p>
-            <p className="text-3xl font-black">{totalTransport.toLocaleString('fr-FR')} <span className="text-lg font-medium opacity-80">DH</span></p>
-            <p className="text-amber-100 text-sm mt-2">{totalTransport / 200} jours travaillés</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 dark:shadow-none relative overflow-hidden">
+              <div className="relative z-10">
+                <p className="text-indigo-100 text-sm font-medium mb-1">Total Heures Travaillées</p>
+                <p className="text-3xl font-black">{formatHoursMinutes(totalMonthHours)}</p>
+                <p className="text-indigo-100 text-sm mt-2">Soit {Number((totalMonthHours * 700).toFixed(2)).toLocaleString('fr-FR')} DH</p>
+              </div>
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 text-white shadow-lg shadow-amber-200 dark:shadow-none relative overflow-hidden">
+              <div className="relative z-10">
+                <p className="text-amber-100 text-sm font-medium mb-1">Frais de Transport</p>
+                <p className="text-3xl font-black">{totalTransport.toLocaleString('fr-FR')} <span className="text-lg font-medium opacity-80">DH</span></p>
+                <p className="text-amber-100 text-sm mt-2">{totalTransport / 200} jours travaillés</p>
+              </div>
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-200 dark:shadow-none relative overflow-hidden">
+              <div className="relative z-10">
+                <p className="text-emerald-100 text-sm font-medium mb-1">Total Général Mensuel</p>
+                <p className="text-4xl font-black">{grandTotal.toLocaleString('fr-FR')} <span className="text-xl font-medium opacity-80">DH</span></p>
+              </div>
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
+            </div>
           </div>
-          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
-        </div>
 
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-200 dark:shadow-none relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-emerald-100 text-sm font-medium mb-1">Total Général Mensuel</p>
-            <p className="text-4xl font-black">{grandTotal.toLocaleString('fr-FR')} <span className="text-xl font-medium opacity-80">DH</span></p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {daysRender}
           </div>
-          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {daysRender}
-      </div>
-      </>
+          {/* ── ⚡ Modal Simulation 1h (400 DH) ── */}
+          {showSimModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowSimModal(false)}>
+              <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-lg w-full p-6 border border-amber-200 dark:border-amber-900/50 space-y-6" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      <SparklesIcon className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-white">Simulation 1h (400 DH)</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Calculateur & simulateur d'heures de présence</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowSimModal(false)} className="p-1.5 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-white transition-colors">
+                    <XMarkIcon className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Info Card */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-amber-600/5 border border-amber-200/60 dark:border-amber-800/40">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">Tarif Simulation 1 Heure</span>
+                    <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-500 text-white shadow-sm">400 DH / Jour</span>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    Chaque simulation d'<strong>1 heure</strong> correspond à <strong>200 DH (travail)</strong> + <strong>200 DH (indemnité transport)</strong> = <strong className="text-amber-600 dark:text-amber-400">400 DH total</strong>.
+                  </p>
+                </div>
+
+                {/* Interactive Simulator Slider */}
+                <div className="space-y-3 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">
+                  <div className="flex justify-between items-center text-sm font-bold text-gray-800 dark:text-gray-200">
+                    <span>Simuler le nombre de jours:</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-extrabold text-base">{simDaysCount} jour{simDaysCount > 1 ? 's' : ''}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="30"
+                    value={simDaysCount}
+                    onChange={e => setSimDaysCount(parseInt(e.target.value, 10))}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Gain Total Estimé:</span>
+                    <span className="text-xl font-black text-amber-600 dark:text-amber-400">{(simDaysCount * 400).toLocaleString('fr-FR')} DH</span>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions Rapides de Simulation</p>
+
+                  <button
+                    onClick={() => {
+                      applyOneHourSimulation(formatDateToKey(new Date()));
+                      setShowSimModal(false);
+                    }}
+                    className="w-full py-3 px-4 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-md transition-all flex items-center justify-center space-x-2"
+                  >
+                    <span>📍 Appliquer 1h (400 DH) à Aujourd'hui</span>
+                  </button>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={simTargetDate}
+                      onChange={e => setSimTargetDate(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!simTargetDate) { toast.error('Veuillez choisir une date'); return; }
+                        applyOneHourSimulation(simTargetDate);
+                        setShowSimModal(false);
+                      }}
+                      className="px-4 py-2 text-sm font-bold bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white rounded-xl transition-all"
+                    >
+                      Appliquer
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      fillMonthOneHourSimulation();
+                      setShowSimModal(false);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-all flex items-center justify-center space-x-1"
+                  >
+                    <span>⚡ Remplir TOUS les jours ouvrables du mois en 1h (400 DH/j)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+      )}
+        </>
       )}
     </div>
   );
