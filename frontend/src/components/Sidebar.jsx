@@ -37,6 +37,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
     { name: 'Équipes', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Pointage', to: '/timesheet', icon: TableCellsIcon },
+    { name: 'Simulateur', to: '/timesheet/simulator', icon: BeakerIcon },
     { name: 'Rapports', to: '/reports', icon: ChartBarIcon },
     { name: 'Binary Lab', to: '/binary', icon: BeakerIcon },
   ];
@@ -47,6 +48,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
     { name: 'Mon Équipe', to: '/teams', icon: UserGroupIcon },
     { name: t('tasks'), to: '/tasks', icon: ClipboardDocumentListIcon },
     { name: 'Pointage', to: '/timesheet', icon: TableCellsIcon },
+    { name: 'Simulateur', to: '/timesheet/simulator', icon: BeakerIcon },
     { name: 'Mes Documents', to: '/my-documents', icon: DocumentTextIcon },
     { name: 'Binary Lab', to: '/binary', icon: BeakerIcon },
   ];
@@ -114,6 +116,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
           <NavLink
             key={item.name}
             to={item.to}
+            end={item.to === '/timesheet'}
             onClick={() => setMobileMenuOpen(false)}
             className={({ isActive }) =>
               `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive

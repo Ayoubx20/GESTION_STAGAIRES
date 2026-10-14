@@ -2,11 +2,12 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import AIAssistantWidget from './AIAssistantWidget';
+import { ArrowUpIcon } from '@heroicons/react/24/outline';
 
 const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [collapsed, setCollapsed] = React.useState(false);
+  const [showBackToTop, setShowBackToTop] = React.useState(false);
 
   // Close mobile menu on resize to desktop
   React.useEffect(() => {
@@ -17,6 +18,27 @@ const Layout = () => {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  React.useEffect(() => {
+    const scrollContainer = document.getElementById('main-content');
+    if (!scrollContainer) return undefined;
+    let previousScrollTop = scrollContainer.scrollTop;
+
+    const handleScroll = () => {
+      const currentScrollTop = scrollContainer.scrollTop;
+      if (currentScrollTop <= 0) {
+        setShowBackToTop(false);
+      } else if (currentScrollTop < previousScrollTop) {
+        setShowBackToTop(true);
+      } else if (currentScrollTop > previousScrollTop) {
+        setShowBackToTop(false);
+      }
+      previousScrollTop = currentScrollTop;
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
@@ -53,15 +75,25 @@ const Layout = () => {
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden z-10 relative">
         <Navbar setMobileMenuOpen={setMobileMenuOpen} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth scrollbar-hide">
+        <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth scrollbar-hide">
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>
         </main>
       </div>
 
-      {/* FLOATING AI ASSISTANT WIDGET */}
-      <AIAssistantWidget />
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={() => document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Retour en haut de la page"
+          title="Retour en haut"
+          className="fixed bottom-6 right-6 z-[80] flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-all hover:scale-110 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 dark:focus:ring-indigo-900"
+        >
+          <ArrowUpIcon className="h-5 w-5" />
+        </button>
+      )}
+
     </div>
   );
 };

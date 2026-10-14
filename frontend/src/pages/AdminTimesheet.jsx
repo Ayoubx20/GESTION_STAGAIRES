@@ -52,9 +52,10 @@ const calcStats = (days, periodDays) => {
     const h = typeof val === 'object' ? (Number(val.hours) || 0) : (parseFloat(val) || 0);
     const simH = typeof val === 'object' ? (Number(val.simulatedHours) || (val.isSimulated ? Number(val.hours) || 0 : 0)) : 0;
     const tOnly = typeof val === 'object' ? !!val.transportOnly : false;
+    const simTOnly = typeof val === 'object' ? !!val.simulatorTransportOnly : false;
     hours += (h + simH);
     pay += Math.round(h * 700) + (simH * 400);
-    if (h > 0 || simH > 0 || tOnly) transport += 200;
+    if (h > 0 || simH > 0 || tOnly || simTOnly) transport += 200;
   });
   const total = pay + transport;
   return { hours, transport, total, workedDays: Math.round(transport / 200) };
@@ -226,18 +227,24 @@ const DetailModal = ({ ts, periodDays, onClose }) => {
               const val = days[key];
               if (!val) return null;
               const h = typeof val === 'object' ? (Number(val.hours)||0) : (parseFloat(val)||0);
+              const simH = typeof val === 'object' ? (Number(val.simulatedHours) || (val.isSimulated ? Number(val.hours) || 0 : 0)) : 0;
               const tOnly = typeof val === 'object' ? !!val.transportOnly : false;
-              if (h === 0 && !tOnly) return null;
+              const simTOnly = typeof val === 'object' ? !!val.simulatorTransportOnly : false;
+              if (h === 0 && simH === 0 && !tOnly && !simTOnly) return null;
               const dayLabel = d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
-              const dailyTotal = Math.round(h*700) + 200;
+              const dailyTotal = Math.round(h*700) + (simH * 400) + 200;
               return (
                 <div key={key} className="flex justify-between items-center py-1.5 px-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-sm">
                   <span className="text-gray-600 dark:text-gray-300 capitalize">{dayLabel}</span>
                   <div className="flex gap-4 items-center">
-                    {tOnly && !h ? (
+                    {h > 0 && (
+                      <span className="text-indigo-600 dark:text-indigo-400 font-bold">{formatHM(h)} normal</span>
+                    )}
+                    {simH > 0 && (
+                      <span className="text-amber-600 dark:text-amber-400 font-bold">{formatHM(simH)} simulé</span>
+                    )}
+                    {(tOnly || simTOnly) && h === 0 && simH === 0 && (
                       <span className="text-amber-500 text-xs font-bold">🚗 Transport seul</span>
-                    ) : (
-                      <span className="text-indigo-600 dark:text-indigo-400 font-bold">{formatHM(h)}</span>
                     )}
                     <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-xs">{dailyTotal} DH</span>
                   </div>

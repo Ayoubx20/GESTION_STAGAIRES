@@ -187,6 +187,7 @@ function App() {
                   <Route path="profile" element={<Profile />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="timesheet" element={<Timesheet />} />
+                  <Route path="timesheet/simulator" element={<Timesheet mode="simulator" />} />
 
                   {/* ===== ADMIN POINTAGE DASHBOARD ===== */}
                   <Route path="admin-timesheet" element={

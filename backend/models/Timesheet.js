@@ -13,7 +13,8 @@ const timesheetSchema = new mongoose.Schema({
       hours: { type: Number, default: 0 },
       simulatedHours: { type: Number, default: 0 },
       isSimulated: { type: Boolean, default: false },
-      transportOnly: { type: Boolean, default: false }
+      transportOnly: { type: Boolean, default: false },
+      simulatorTransportOnly: { type: Boolean, default: false }
     },
     default: {}
   }

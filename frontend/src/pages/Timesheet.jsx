@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ArrowDownTrayIcon, PlusIcon, MinusIcon, TableCellsIcon, UsersIcon, SparklesIcon, ClockIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { Link } from 'react-router-dom';
+import { ChevronLeftIcon, ChevronRightIcon, ArrowPathIcon, ArrowDownTrayIcon, PlusIcon, MinusIcon, TableCellsIcon, UsersIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import AdminTimesheet from './AdminTimesheet';
 
-const Timesheet = () => {
+const Timesheet = ({ mode = 'normal' }) => {
   const { user, isAdmin, isSupervisor } = useAuth();
   const isAdminOrSupervisor = isAdmin || isSupervisor;
+  const isSimulator = mode === 'simulator';
   const [activeTab, setActiveTab] = useState('my');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [data, setData] = useState({});
@@ -183,6 +185,12 @@ const Timesheet = () => {
     }, 200);
   }, [getTodayPeriodStart]);
 
+  useEffect(() => {
+    if (!loading) {
+      goToToday();
+    }
+  }, [loading, goToToday]);
+
   const handlePrevMonth = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() - 1;
@@ -196,14 +204,22 @@ const Timesheet = () => {
   };
 
   const handleResetMonth = () => {
-    if (window.confirm('Voulez-vous vraiment réinitialiser toutes les données de cette période ?')) {
+    if (window.confirm(`Voulez-vous vraiment réinitialiser ${isSimulator ? 'les simulations' : 'le pointage normal'} de cette période ?`)) {
       const newData = { ...data };
       periodDays.forEach(date => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const dateKey = `${year}-${month}-${day}`;
-        delete newData[dateKey];
+        const dateKey = formatDateToKey(date);
+        const dayData = getDayData(dateKey);
+        if (isSimulator) {
+          if (dayData.hours === 0 && !dayData.transportOnly) {
+            delete newData[dateKey];
+          } else {
+            newData[dateKey] = { ...dayData, simulatedHours: 0, simulatorTransportOnly: false };
+          }
+        } else if (dayData.simulatedHours > 0 || dayData.simulatorTransportOnly) {
+          newData[dateKey] = { ...dayData, hours: 0, transportOnly: false };
+        } else {
+          delete newData[dateKey];
+        }
       });
       saveData(newData);
     }
@@ -211,15 +227,16 @@ const Timesheet = () => {
 
   const getDayData = (dateKey) => {
     const val = data[dateKey];
-    if (!val) return { hours: 0, simulatedHours: 0, transportOnly: false };
+    if (!val) return { hours: 0, simulatedHours: 0, transportOnly: false, simulatorTransportOnly: false };
     if (typeof val === 'object') {
       return {
         hours: Number(val.hours) || 0,
         simulatedHours: Number(val.simulatedHours) || (val.isSimulated ? Number(val.hours) || 0 : 0),
-        transportOnly: !!val.transportOnly
+        transportOnly: !!val.transportOnly,
+        simulatorTransportOnly: !!val.simulatorTransportOnly
       };
     }
-    return { hours: parseFloat(val) || 0, simulatedHours: 0, transportOnly: false };
+    return { hours: parseFloat(val) || 0, simulatedHours: 0, transportOnly: false, simulatorTransportOnly: false };
   };
 
   const incrementHour = (dateKey) => {
@@ -260,7 +277,7 @@ const Timesheet = () => {
       hours: Number(newHours.toFixed(6))
     };
     const newData = { ...data };
-    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly) {
+    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly && !newDayData.simulatorTransportOnly) {
       delete newData[dateKey];
     } else {
       newData[dateKey] = newDayData;
@@ -337,7 +354,7 @@ const Timesheet = () => {
         hours: Number(decimalHours.toFixed(6))
       };
       const newData = { ...data };
-      if (newDayData.hours === 0 && newDayData.simulatedHours === 0 && !newDayData.transportOnly) {
+      if (newDayData.hours === 0 && newDayData.simulatedHours === 0 && !newDayData.transportOnly && !newDayData.simulatorTransportOnly) {
         delete newData[dateKey];
       } else {
         newData[dateKey] = newDayData;
@@ -365,7 +382,7 @@ const Timesheet = () => {
     };
 
     const newData = { ...data };
-    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly) {
+    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly && !newDayData.simulatorTransportOnly) {
       delete newData[dateKey];
     } else {
       newData[dateKey] = newDayData;
@@ -388,12 +405,13 @@ const Timesheet = () => {
 
   const toggleTransportOnly = (dateKey) => {
     const dayData = getDayData(dateKey);
+    const transportOnlyKey = isSimulator ? 'simulatorTransportOnly' : 'transportOnly';
     const newDayData = {
       ...dayData,
-      transportOnly: !dayData.transportOnly
+      [transportOnlyKey]: !dayData[transportOnlyKey]
     };
     const newData = { ...data };
-    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly) {
+    if (newDayData.hours === 0 && (newDayData.simulatedHours || 0) === 0 && !newDayData.transportOnly && !newDayData.simulatorTransportOnly) {
       delete newData[dateKey];
     } else {
       newData[dateKey] = newDayData;
@@ -435,7 +453,7 @@ const Timesheet = () => {
       simulatedHours: newSimHours
     };
     const newData = { ...data };
-    if (newDayData.hours === 0 && newDayData.simulatedHours === 0 && !newDayData.transportOnly) {
+    if (newDayData.hours === 0 && newDayData.simulatedHours === 0 && !newDayData.transportOnly && !newDayData.simulatorTransportOnly) {
       delete newData[dateKey];
     } else {
       newData[dateKey] = newDayData;
@@ -891,18 +909,21 @@ const Timesheet = () => {
       : dayData.hours;
     const simHours = dayData.simulatedHours || 0;
     const transportOnly = dayData.transportOnly;
+    const simulatorTransportOnly = dayData.simulatorTransportOnly;
 
     const normalPay = Math.round(numHours * 700);
     const simPay = simHours * 400;
 
     const hasNormalTransport = numHours > 0 || transportOnly;
-    const hasSimTransport = simHours > 0;
-    const hasTransport = hasNormalTransport || hasSimTransport;
+    const hasSimTransport = simHours > 0 || simulatorTransportOnly;
+    const visibleHours = isSimulator ? simHours : numHours;
+    const visiblePay = isSimulator ? simPay : normalPay;
+    const hasTransport = isSimulator ? hasSimTransport : hasNormalTransport;
     const transport = hasTransport ? 200 : 0;
 
-    const dailyTotal = normalPay + simPay + transport;
+    const dailyTotal = visiblePay + transport;
 
-    totalMonthHours += numHours + simHours;
+    totalMonthHours += visibleHours;
     totalTransport += transport;
     grandTotal += dailyTotal;
 
@@ -941,8 +962,7 @@ const Timesheet = () => {
           </div>
 
           <div className="space-y-3">
-            {/* 1. HEURES TRAVAILLÉES SECTION (700 DH/h) */}
-            <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 space-y-2">
+            {!isSimulator && <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 space-y-2">
               <div className="flex justify-between items-center">
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">Heures travaillées</label>
                 {numHours > 0 && (
@@ -982,10 +1002,9 @@ const Timesheet = () => {
                   <PlusIcon className="w-4 h-4" />
                 </button>
               </div>
-            </div>
+            </div>}
 
-            {/* 2. HEURES SIMULATEUR SECTION (400 DH/h + automatique 200 DH transport) */}
-            <div className="p-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-800/60 space-y-2">
+            {isSimulator && <div className="p-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-800/60 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-1.5">
                   <SparklesIcon className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
@@ -1015,14 +1034,14 @@ const Timesheet = () => {
                   <PlusIcon className="w-4 h-4" />
                 </button>
               </div>
-            </div>
+            </div>}
 
             {/* 3. TRANSPORT */}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500 dark:text-gray-400">Transport:</span>
               <span className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 {transport} DH
-                {hasSimTransport && (
+                {isSimulator && hasSimTransport && (
                   <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">(Inclus)</span>
                 )}
               </span>
@@ -1033,15 +1052,15 @@ const Timesheet = () => {
         <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/50">
           <button
             onClick={() => toggleTransportOnly(dateKey)}
-            disabled={numHours > 0 || simHours > 0}
-            className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold border transition-all ${transportOnly
+            disabled={isSimulator ? simHours > 0 : numHours > 0}
+            className={`w-full py-1.5 px-2 rounded-lg text-[11px] font-bold border transition-all ${(isSimulator ? simulatorTransportOnly : transportOnly)
               ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-              : (numHours > 0 || simHours > 0)
+              : (isSimulator ? simHours > 0 : numHours > 0)
                 ? 'bg-gray-50 text-gray-400 border-gray-100 dark:bg-gray-800/40 dark:text-gray-600 dark:border-gray-800 cursor-not-allowed'
                 : 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
           >
-            🚗 {transportOnly ? 'Transport Seul Actif' : 'Transport Seul (200 DH)'}
+            🚗 {(isSimulator ? simulatorTransportOnly : transportOnly) ? 'Transport Seul Actif' : 'Transport Seul (200 DH)'}
           </button>
         </div>
       </div>
@@ -1099,6 +1118,27 @@ const Timesheet = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
 
+      <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl w-fit">
+        <Link
+          to="/timesheet"
+          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${!isSimulator
+            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+        >
+          <TableCellsIcon className="w-4 h-4" /> Pointage normal
+        </Link>
+        <Link
+          to="/timesheet/simulator"
+          className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${isSimulator
+            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+        >
+          <SparklesIcon className="w-4 h-4" /> Simulateur
+        </Link>
+      </div>
+
       {/* ── Tab switcher (admin/supervisor only) ── */}
       {isAdminOrSupervisor && (
         <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl w-fit">
@@ -1130,20 +1170,31 @@ const Timesheet = () => {
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Pointage Mensuel</h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-1">Gérez vos heures de travail et frais de transport</p>
+              <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                {isSimulator ? 'Simulateur de pointage' : 'Pointage Mensuel'}
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400 mt-1">
+                {isSimulator
+                  ? 'Gérez vos heures simulées séparément de votre pointage normal'
+                  : 'Gérez vos heures de travail et frais de transport'}
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-
-
-              <button
+              {!isSimulator && <button
                 onClick={exportToExcel}
                 className="inline-flex items-center px-3.5 py-2 border border-emerald-300 dark:border-emerald-700 shadow-sm text-sm font-medium rounded-xl text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
               >
                 <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
                 Excel
-              </button>
+              </button>}
+              {isSimulator && <button
+                onClick={() => setShowSimModal(true)}
+                className="inline-flex items-center px-3.5 py-2 border border-amber-300 dark:border-amber-700 shadow-sm text-sm font-medium rounded-xl text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+              >
+                <SparklesIcon className="w-4 h-4 mr-2" />
+                Actions simulateur
+              </button>}
             </div>
           </div>
 
@@ -1171,7 +1222,7 @@ const Timesheet = () => {
               </button>
               <button onClick={handleResetMonth} className="inline-flex items-center px-4 py-2 border border-red-200 text-red-600 dark:border-red-800/30 dark:text-red-400 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl text-sm font-semibold transition-colors">
                 <ArrowPathIcon className="w-4 h-4 mr-2" />
-                Réinitialiser le mois
+                Réinitialiser {isSimulator ? 'les simulations' : 'le pointage normal'}
               </button>
             </div>
           </div>
@@ -1179,9 +1230,11 @@ const Timesheet = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200 dark:shadow-none relative overflow-hidden">
               <div className="relative z-10">
-                <p className="text-indigo-100 text-sm font-medium mb-1">Total Heures Travaillées</p>
+                <p className="text-indigo-100 text-sm font-medium mb-1">{isSimulator ? 'Total Heures Simulées' : 'Total Heures Travaillées'}</p>
                 <p className="text-3xl font-black">{formatHoursMinutes(totalMonthHours)}</p>
-                <p className="text-indigo-100 text-sm mt-2">Soit {Number((totalMonthHours * 700).toFixed(2)).toLocaleString('fr-FR')} DH</p>
+                <p className="text-indigo-100 text-sm mt-2">
+                  Soit {Number((totalMonthHours * (isSimulator ? 400 : 700)).toFixed(2)).toLocaleString('fr-FR')} DH
+                </p>
               </div>
               <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
             </div>
