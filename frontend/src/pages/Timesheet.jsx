@@ -889,6 +889,7 @@ const Timesheet = ({ mode = 'normal' }) => {
 
   let totalMonthHours = 0;
   let totalTransport = 0;
+  let totalWorkedDays = 0;
   let grandTotal = 0;
 
   const today = new Date();
@@ -927,6 +928,7 @@ const Timesheet = ({ mode = 'normal' }) => {
 
     totalMonthHours += visibleHours;
     totalTransport += transport;
+    if (isSimulator ? hasSimTransport : hasNormalTransport) totalWorkedDays++;
     grandTotal += dailyTotal;
 
     const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
@@ -1247,7 +1249,7 @@ const Timesheet = ({ mode = 'normal' }) => {
               <div className="relative z-10">
                 <p className="text-amber-100 text-sm font-medium mb-1">Frais de Transport</p>
                 <p className="text-3xl font-black">{totalTransport.toLocaleString('fr-FR')} <span className="text-lg font-medium opacity-80">DH</span></p>
-                <p className="text-amber-100 text-sm mt-2">{totalTransport / 200} jours travaillés</p>
+                <p className="text-amber-100 text-sm mt-2">{totalWorkedDays} jours travaillés</p>
               </div>
               <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white opacity-10 rounded-full blur-2xl"></div>
             </div>
