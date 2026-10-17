@@ -431,7 +431,7 @@ const Timesheet = ({ mode = 'normal' }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // ⚡ Simulation Helpers (simulatedHours @ 400 DH/h + automatic 200 DH transport)
+  // ⚡ Simulation Helpers (simulatedHours @ 400 DH/h + shared daily transport)
   const incrementSimulatedHour = (dateKey) => {
     const dayData = getDayData(dateKey);
     const newSimHours = (dayData.simulatedHours || 0) + 1;
@@ -464,7 +464,7 @@ const Timesheet = ({ mode = 'normal' }) => {
   const applyOneHourSimulation = (dateKey) => {
     const targetKey = dateKey || formatDateToKey(new Date());
     incrementSimulatedHour(targetKey);
-    toast.success(`⚡ Simulation 1h (+200 DH transport) ajoutée pour le ${targetKey}`);
+    toast.success(`⚡ Simulation 1h ajoutée pour le ${targetKey}`);
   };
 
   // ⚡ Fill entire month weekdays with 1h Simulation
@@ -918,7 +918,9 @@ const Timesheet = ({ mode = 'normal' }) => {
     const hasSimTransport = simHours > 0 || simulatorTransportOnly;
     const visibleHours = isSimulator ? simHours : numHours;
     const visiblePay = isSimulator ? simPay : normalPay;
-    const hasTransport = isSimulator ? hasSimTransport : hasNormalTransport;
+    const hasTransport = isSimulator
+      ? hasSimTransport && !hasNormalTransport
+      : hasNormalTransport;
     const transport = hasTransport ? 200 : 0;
 
     const dailyTotal = visiblePay + transport;
@@ -1042,7 +1044,9 @@ const Timesheet = ({ mode = 'normal' }) => {
               <span className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 {transport} DH
                 {isSimulator && hasSimTransport && (
-                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">(Inclus)</span>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                    {hasNormalTransport ? '(Déjà compté avec le pointage normal)' : '(Inclus)'}
+                  </span>
                 )}
               </span>
             </div>
@@ -1288,7 +1292,7 @@ const Timesheet = ({ mode = 'normal' }) => {
                     <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-500 text-white shadow-sm">400 DH / Jour</span>
                   </div>
                   <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Chaque simulation d'<strong>1 heure</strong> correspond à <strong>200 DH (travail)</strong> + <strong>200 DH (indemnité transport)</strong> = <strong className="text-amber-600 dark:text-amber-400">400 DH total</strong>.
+                    Chaque simulation d'<strong>1 heure</strong> correspond à <strong>400 DH de travail</strong>. Le transport de <strong>200 DH</strong> est compté une seule fois par jour, même si vous ajoutez aussi des heures normales.
                   </p>
                 </div>
 
