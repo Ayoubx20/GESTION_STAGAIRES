@@ -1,5 +1,6 @@
 // context/AuthContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -30,7 +31,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Error loading user:', error);
       // Supprimer le token UNIQUEMENT si l'erreur est 401 (Non autorisé)
-      if (error.response?.status === 401) {
+      if ([401, 403].includes(error.response?.status)) {
         localStorage.removeItem('token');
         setUser(null);
       }
@@ -43,8 +44,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response;
-      
-      localStorage.setItem('token', token);
+      if (Capacitor.isNativePlatform() && token) localStorage.setItem('token', token);
+      else localStorage.removeItem('token');
       
       setUser(user);
       
@@ -60,12 +61,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
-      const { token, user } = response;
-      
-      localStorage.setItem('token', token);
-      setUser(user);
-      
-      toast.success('Inscription réussie !');
+      toast.success(response.message || 'Inscription reçue. Votre compte doit être approuvé avant connexion.');
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || "Erreur lors de l'inscription";

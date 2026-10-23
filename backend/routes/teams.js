@@ -3,12 +3,47 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Team = require('../models/Team');
 const Intern = require('../models/Intern');
+const User = require('../models/User');
+const mongoose = require('mongoose');
+
+function validTeamFields(body, requireName = false) {
+  const allowed = new Set(['name', 'description', 'project', 'interns']);
+  if (Object.keys(body).some((field) => !allowed.has(field))) return false;
+  if (requireName && (typeof body.name !== 'string' || !body.name.trim() || body.name.length > 120)) return false;
+  if (body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim() || body.name.length > 120)) return false;
+  if (body.description !== undefined && (typeof body.description !== 'string' || body.description.length > 2000)) return false;
+  if (body.project !== undefined && (typeof body.project !== 'string' || body.project.length > 200)) return false;
+  if (body.interns !== undefined && (!Array.isArray(body.interns) || body.interns.length > 100)) return false;
+  return true;
+}
+
+async function normalizeInternIds(internIds, supervisorId = null) {
+  if (!Array.isArray(internIds)) return [];
+  const uniqueIds = [...new Set(internIds.map(String))];
+  if (uniqueIds.some((id) => !mongoose.isValidObjectId(id))) return null;
+  const interns = await Intern.find({ _id: { $in: uniqueIds } }).select('_id user supervisor').lean();
+  if (interns.length !== uniqueIds.length) return null;
+  const users = await User.find({ _id: { $in: interns.map((intern) => String(intern.user)) }, role: 'intern' }).select('_id').lean();
+  if (users.length !== uniqueIds.length) return null;
+  if (supervisorId) {
+    const existingTeams = await Team.find({ supervisor: supervisorId }).select('interns').lean();
+    const scopedIds = new Set([
+      ...interns.filter((intern) => String(intern.supervisor) === String(supervisorId)).map((intern) => String(intern._id)),
+      ...existingTeams.flatMap((team) => (team.interns || []).map(String))
+    ]);
+    if (uniqueIds.some((id) => !scopedIds.has(id))) return null;
+  }
+  return uniqueIds;
+}
 
 // @desc    Get all teams
 // @route   GET /api/teams
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
+    if (!['admin', 'supervisor', 'intern'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Accès non autorisé' });
+    }
     const query = {};
     if (req.user.role === 'supervisor') {
       query.supervisor = req.user.id;
@@ -65,6 +100,8 @@ router.get('/', auth, async (req, res) => {
 // @access  Private
 router.get('/:id', auth, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Identifiant invalide' });
+    if (!['admin', 'supervisor', 'intern'].includes(req.user.role)) return res.status(403).json({ success: false, message: 'Accès non autorisé' });
     const team = await Team.findById(req.params.id)
       .populate('supervisor', 'firstName lastName email')
       .populate({
@@ -103,13 +140,14 @@ router.get('/:id', auth, async (req, res) => {
 // @access  Private (Admin & Supervisor)
 router.post('/', auth, async (req, res) => {
   try {
-    if (req.user.role === 'intern') {
+    if (!['admin', 'supervisor'].includes(req.user.role)) {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
+    if (!validTeamFields(req.body, true)) return res.status(400).json({ success: false, message: 'Données d’équipe invalides' });
 
     const { name, description, project, interns } = req.body;
-
-    const uniqueInterns = Array.isArray(interns) ? [...new Set(interns)] : [];
+    const uniqueInterns = await normalizeInternIds(interns || [], req.user.role === 'supervisor' ? req.user.id : null);
+    if (!uniqueInterns) return res.status(400).json({ success: false, message: 'Liste de stagiaires invalide' });
 
     const team = await Team.create({
       name,
@@ -135,6 +173,9 @@ router.post('/', auth, async (req, res) => {
 // @access  Private
 router.put('/:id', auth, async (req, res) => {
   try {
+    if (!['admin', 'supervisor'].includes(req.user.role)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Identifiant invalide' });
+    if (!validTeamFields(req.body)) return res.status(400).json({ success: false, message: 'Données d’équipe invalides' });
     const team = await Team.findById(req.params.id);
 
     if (!team) {
@@ -145,13 +186,19 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
 
-    if (req.body.interns && Array.isArray(req.body.interns)) {
-      req.body.interns = [...new Set(req.body.interns)];
+    const update = {};
+    for (const field of ['name', 'description', 'project']) {
+      if (req.body[field] !== undefined) update[field] = req.body[field];
+    }
+    if (req.body.interns !== undefined) {
+      const internIds = await normalizeInternIds(req.body.interns, req.user.role === 'supervisor' ? req.user.id : null);
+      if (!internIds) return res.status(400).json({ success: false, message: 'Liste de stagiaires invalide' });
+      update.interns = internIds;
     }
 
     const updatedTeam = await Team.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      update,
       { returnDocument: 'after', runValidators: true }
     );
 
@@ -171,6 +218,8 @@ router.put('/:id', auth, async (req, res) => {
 // @access  Private
 router.delete('/:id', auth, async (req, res) => {
   try {
+    if (!['admin', 'supervisor'].includes(req.user.role)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: 'Identifiant invalide' });
     const team = await Team.findById(req.params.id);
 
     if (!team) {

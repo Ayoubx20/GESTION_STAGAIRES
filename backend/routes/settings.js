@@ -4,13 +4,22 @@ const auth = require('../middleware/auth');
 const Settings = require('../models/Settings');
 const UserSettings = require('../models/UserSettings');
 
+function publicGlobalSettings(settings) {
+  const { smtpPassword, smtpUsername, ...safeSettings } = settings.toObject();
+  return {
+    ...safeSettings,
+    smtpConfigured: Boolean(smtpUsername && smtpPassword),
+    smtpPasswordConfigured: Boolean(smtpPassword)
+  };
+}
+
 // @desc    Get all combined settings (Global + Personal)
 // @route   GET /api/settings
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
     // 1. Get Global Settings
-    let globalSettings = await Settings.findOne();
+    let globalSettings = await Settings.findOne().select('+smtpPassword');
     if (!globalSettings) {
       globalSettings = await Settings.create({});
     }
@@ -23,7 +32,7 @@ router.get('/', auth, async (req, res) => {
 
     // Combined settings for the frontend
     const settings = {
-      ...globalSettings.toObject(),
+      ...publicGlobalSettings(globalSettings),
       ...personalSettings.toObject(),
       _id: personalSettings._id // Use personal ID for the combined object
     };
@@ -62,6 +71,7 @@ router.put('/', auth, async (req, res) => {
       const globalData = {};
       globalFields.forEach(field => {
         if (settingsData[field] !== undefined) {
+          if (field === 'smtpPassword' && (typeof settingsData[field] !== 'string' || !settingsData[field].trim())) return;
           globalData[field] = settingsData[field];
         }
       });
@@ -95,13 +105,14 @@ router.put('/', auth, async (req, res) => {
     );
 
     // Get fresh global settings to return combined object
-    const finalGlobal = await Settings.findOne();
+    let finalGlobal = await Settings.findOne().select('+smtpPassword');
+    if (!finalGlobal) finalGlobal = await Settings.create({});
 
     res.json({
       success: true,
       message: 'Paramètres mis à jour avec succès',
       settings: {
-        ...finalGlobal.toObject(),
+        ...publicGlobalSettings(finalGlobal),
         ...personalSettings.toObject()
       }
     });

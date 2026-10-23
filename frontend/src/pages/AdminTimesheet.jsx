@@ -28,7 +28,7 @@ const formatHM = (H) => {
 const getDaysInPeriod = (periodStart) => {
   const year = periodStart.getFullYear();
   const month = periodStart.getMonth();
-  const start = new Date(year, month, 20);
+  const start = new Date(year, month, 21);
   const end = new Date(year, month + 1, 20);
   const days = [];
   let cur = new Date(start);
@@ -264,8 +264,8 @@ const AdminTimesheet = () => {
   const [periodStart, setPeriodStart] = useState(() => {
     const now = new Date();
     const day = now.getDate();
-    const m = day < 20 ? now.getMonth() - 1 : now.getMonth();
-    return new Date(now.getFullYear(), m < 0 ? 11 : m, 20);
+    const m = day < 21 ? now.getMonth() - 1 : now.getMonth();
+    return new Date(now.getFullYear(), m, 21);
   });
   const [allData, setAllData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -318,12 +318,12 @@ const AdminTimesheet = () => {
   const prevPeriod = () => {
     const y = periodStart.getFullYear();
     const m = periodStart.getMonth() - 1;
-    setPeriodStart(new Date(y, m < 0 ? 11 : m, 20));
+    setPeriodStart(new Date(y, m, 21));
   };
   const nextPeriod = () => {
     const y = periodStart.getFullYear();
     const m = periodStart.getMonth() + 1;
-    setPeriodStart(new Date(y, m > 11 ? 0 : m, 20));
+    setPeriodStart(new Date(y, m, 21));
   };
 
   if (loading) {

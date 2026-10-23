@@ -37,6 +37,8 @@ const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 const BinaryLab = lazy(() => import('./pages/BinaryLab/index.jsx'));
 const Timesheet = lazy(() => import('./pages/Timesheet.jsx'));
 const AdminTimesheet = lazy(() => import('./pages/AdminTimesheet.jsx'));
+const ErrorReports = lazy(() => import('./pages/ErrorReports.jsx'));
+const Messages = lazy(() => import('./pages/Messages.jsx'));
 
 // Protected Route
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -186,6 +188,8 @@ function App() {
                   {/* ===== AUTRES PAGES ===== */}
                   <Route path="profile" element={<Profile />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="messages" element={<Messages />} />
+                  <Route path="error-reports" element={<ErrorReports />} />
                   <Route path="timesheet" element={<Timesheet />} />
                   <Route path="timesheet/simulator" element={<Timesheet mode="simulator" />} />
 

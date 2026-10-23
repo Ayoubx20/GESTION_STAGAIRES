@@ -22,7 +22,9 @@ import {
   DocumentTextIcon,
   XMarkIcon,
   BeakerIcon,
-  TableCellsIcon
+  TableCellsIcon,
+  ExclamationTriangleIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
@@ -60,6 +62,7 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
   ] : [];
 
   const bottomNavigation = [
+    { name: 'Messages', to: '/messages', icon: ChatBubbleLeftRightIcon },
     { name: t('profile'), to: '/profile', icon: UserCircleIcon },
     { name: t('settings'), to: '/settings', icon: Cog6ToothIcon },
   ];
@@ -129,6 +132,20 @@ const Sidebar = ({ setMobileMenuOpen, collapsed, setCollapsed }) => {
             {!collapsed && item.name}
           </NavLink>
         ))}
+
+        <NavLink
+          to="/error-reports"
+          onClick={() => setMobileMenuOpen(false)}
+          className={({ isActive }) =>
+            `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
+              ? 'bg-primary-50 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`
+          }
+        >
+          <ExclamationTriangleIcon className={`w-5 h-5 ${collapsed ? 'mx-auto' : 'mr-3'}`} />
+          {!collapsed && 'Signaler une erreur'}
+        </NavLink>
 
         {/* Liens admin seulement */}
         {adminNavigation.map((item) => (

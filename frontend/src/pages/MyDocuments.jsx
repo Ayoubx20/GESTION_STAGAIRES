@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { downloadPrivateFile } from '../services/privateFiles';
 import toast from 'react-hot-toast';
 import {
   DocumentPlusIcon,
@@ -94,7 +95,14 @@ const MyDocuments = () => {
     }
   };
 
-  const API_BASE_URL = (api.defaults.baseURL || '').replace('/api', '');
+  const handleDownloadDocument = async (doc) => {
+    try {
+      await downloadPrivateFile(`/uploads/documents/${doc._id}`, doc.name);
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      toast.error('Impossible de télécharger ce document.');
+    }
+  };
 
   const filteredDocuments = internProfile?.documents?.filter(doc =>
     doc.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -177,15 +185,14 @@ const MyDocuments = () => {
                   <DocumentIcon className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <a
-                    href={`${API_BASE_URL}${doc.url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadDocument(doc)}
                     className="p-2 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors"
                     title="Télécharger"
                   >
                     <ArrowDownTrayIcon className="w-5 h-5" />
-                  </a>
+                  </button>
                   <button
                     onClick={() => handleDeleteDocument(doc._id)}
                     className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 bg-gray-50 dark:bg-gray-700 rounded-lg transition-colors"
@@ -207,14 +214,13 @@ const MyDocuments = () => {
                 <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                   {doc.url.split('.').pop()}
                 </span>
-                <a
-                  href={`${API_BASE_URL}${doc.url}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => handleDownloadDocument(doc)}
                   className="text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors"
                 >
-                  Ouvrir
-                </a>
+                  Télécharger
+                </button>
               </div>
             </div>
           ))

@@ -63,6 +63,19 @@ const Navbar = ({ setMobileMenuOpen }) => {
     }
   };
 
+  const handleNotificationClick = async (notification) => {
+    await handleReadNotification(notification._id, notification.read);
+    if (typeof notification.link === 'string' &&
+        notification.link.startsWith('/') &&
+        !notification.link.startsWith('//')) {
+      navigate(notification.link);
+    }
+  };
+
+  const handleMessageClick = () => {
+    navigate('/messages');
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Bonjour';
@@ -112,7 +125,7 @@ const Navbar = ({ setMobileMenuOpen }) => {
 
             {/* Messages */}
             <Menu as="div" className="relative">
-              <Menu.Button className="relative p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <Menu.Button onClick={handleMessageClick} className="relative p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <EnvelopeIcon className="w-6 h-6" />
                 {data.unreadMessages > 0 && (
                   <span className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-blue-500 rounded-full">
@@ -140,7 +153,14 @@ const Navbar = ({ setMobileMenuOpen }) => {
                       data.messages.map((msg) => (
                         <Menu.Item key={msg._id}>
                           {({ active }) => (
-                            <div className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${!msg.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                            <div
+                              className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                                !msg.read && String(msg.recipient?._id || msg.recipient) === String(user?._id || user?.id)
+                                  ? 'bg-blue-50 dark:bg-blue-900/20'
+                                  : ''
+                              }`}
+                              onClick={() => navigate('/messages')}
+                            >
                               <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                 {msg.sender?.firstName} {msg.sender?.lastName}
                               </p>
@@ -191,9 +211,10 @@ const Navbar = ({ setMobileMenuOpen }) => {
                       data.notifications.map((notification) => (
                         <Menu.Item key={notification._id}>
                           {({ active }) => (
-                            <div
-                              onClick={() => handleReadNotification(notification._id, notification.read)}
-                              className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                            <button
+                              type="button"
+                              onClick={() => handleNotificationClick(notification)}
+                              className={`w-full p-4 text-left cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                                 !notification.read ? 'bg-primary-50 dark:bg-primary-900/20' : ''
                               }`}
                             >
@@ -206,7 +227,7 @@ const Navbar = ({ setMobileMenuOpen }) => {
                               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                                 {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: fr })}
                               </p>
-                            </div>
+                            </button>
                           )}
                         </Menu.Item>
                       ))

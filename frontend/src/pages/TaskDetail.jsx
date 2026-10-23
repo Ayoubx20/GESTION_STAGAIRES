@@ -113,7 +113,7 @@ const TaskDetail = () => {
         </div>
 
         <div className="flex space-x-3 mt-6 md:mt-0">
-          {(isAdmin || isSupervisor || task.assignedTo?._id === user?.id) && (
+          {(isAdmin || isSupervisor) && (
             <Link to={`/tasks/${id}/edit`} className="btn-secondary px-6 rounded-xl font-bold flex items-center">
               <PencilIcon className="w-4 h-4 mr-2" /> Modifier
             </Link>
@@ -217,7 +217,7 @@ const TaskDetail = () => {
           </div>
 
           {/* Status Update Actions */}
-          {(isAdmin || isSupervisor || task.assignedTo?._id === user?.id) && task.status !== 'completed' && (
+          {(isAdmin || isSupervisor || task.assignedTo?._id === user?.id) && task.status !== 'completed' && task.status !== 'pending_validation' && (
             <div className="p-6 bg-primary-500/5 dark:bg-primary-500/5 border border-primary-500/20 rounded-3xl flex flex-col md:flex-row items-center justify-between">
               <div>
                 <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">Mettre à jour l'avancement</h3>

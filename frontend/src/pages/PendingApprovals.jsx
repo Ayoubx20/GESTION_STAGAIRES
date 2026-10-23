@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { downloadPrivateFile } from '../services/privateFiles';
 import { 
   UserCheck, 
   UserX, 
@@ -74,6 +75,15 @@ const PendingApprovals = () => {
     }
   };
 
+  const handleDownloadCV = async (application) => {
+    try {
+      await downloadPrivateFile(`/uploads/cv/${application._id}`, application.cvName || 'CV');
+    } catch (error) {
+      console.error('Erreur de téléchargement du CV:', error);
+      toast.error('Impossible de télécharger ce CV.');
+    }
+  };
+
   const handleRestore = async (id, firstName, lastName) => {
     try {
       await api.put(`/admin/restore-intern/${id}`);
@@ -105,7 +115,7 @@ const PendingApprovals = () => {
       return;
     }
     try {
-      await api.put(`/users/${id}`, { role: nextRole });
+      await api.patch(`/users/${id}/role`, { role: nextRole });
       toast.success(`${firstName} ${lastName} a été promu au rang de ${nextRole}`);
       fetchPendingInterns();
     } catch (error) {
@@ -264,15 +274,14 @@ const PendingApprovals = () => {
                             </p>
                           </div>
                         </div>
-                        <a
-                          href={`${(api.defaults.baseURL || '').replace('/api', '')}${intern.application.cvUrl}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadCV(intern.application)}
                           className="flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                         >
                           <ExternalLink className="h-4 w-4" />
-                          Voir le CV
-                        </a>
+                          Télécharger le CV
+                        </button>
                       </div>
                     )}
                   </div>

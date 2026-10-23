@@ -30,7 +30,7 @@ const getPageAccessSummary = (user) => {
 };
 
 const Users = () => {
-  const { isAdmin } = useAuth();
+  const { user: currentUser, isAdmin } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -99,7 +99,12 @@ const Users = () => {
     e.preventDefault();
     try {
       if (editingUser) {
-        await api.put(`/users/${editingUser._id}`, formData);
+        const { role, password, ...profileData } = formData;
+        if (password.trim()) profileData.password = password;
+        await api.put(`/users/${editingUser._id}`, profileData);
+        if (role !== editingUser.role) {
+          await api.patch(`/users/${editingUser._id}/role`, { role });
+        }
         toast.success('Utilisateur modifié avec succès');
       } else {
         await api.post('/users', formData);
@@ -361,7 +366,8 @@ const Users = () => {
                         <button
                           onClick={() => handleEdit(user)}
                           className="p-1 hover:bg-gray-100 rounded-lg"
-                          title="Modifier"
+                          title="Modifier les informations et le mot de passe"
+                          aria-label={`Modifier les informations de ${user.firstName} ${user.lastName}`}
                         >
                           <PencilIcon className="w-5 h-5 text-gray-500" />
                         </button>
@@ -369,6 +375,7 @@ const Users = () => {
                           onClick={() => handleOpenSettings(user)}
                           className="p-1 hover:bg-gray-100 rounded-lg text-primary-600"
                           title="Paramètres de l'utilisateur"
+                          aria-label={`Paramètres de ${user.firstName} ${user.lastName}`}
                         >
                           <Cog6ToothIcon className="w-5 h-5" />
                         </button>
@@ -455,21 +462,30 @@ const Users = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Mot de passe {editingUser ? '(Laissez vide pour ne pas changer)' : '*'}
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required={!editingUser}
-                  minLength={6}
-                  placeholder={editingUser ? '••••••••' : ''}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors"
-                />
-              </div>
+              {(!editingUser || String(currentUser?._id || currentUser?.id) !== String(editingUser._id)) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {editingUser ? 'Nouveau mot de passe (facultatif)' : 'Mot de passe *'}
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required={!editingUser}
+                    minLength={6}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    placeholder={editingUser ? 'Au moins 6 caractères' : ''}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 transition-colors"
+                  />
+                  {editingUser && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Saisissez un nouveau mot de passe uniquement pour le réinitialiser. Le compte sera déconnecté de ses sessions existantes.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

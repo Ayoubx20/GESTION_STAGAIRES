@@ -16,7 +16,7 @@ const settingsSchema = new mongoose.Schema({
   smtpServer: { type: String, default: 'smtp.gmail.com' },
   smtpPort: { type: Number, default: 587 },
   smtpUsername: { type: String, default: '' },
-  smtpPassword: { type: String, default: '' },
+  smtpPassword: { type: String, default: '', select: false },
   senderEmail: { type: String, default: 'noreply@gestion-stagiaire.com' },
   senderName: { type: String, default: 'Gestion Stagiaire' }
 }, {

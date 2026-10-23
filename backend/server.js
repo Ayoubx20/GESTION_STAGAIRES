@@ -7,6 +7,7 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
+const { createTrustedOrigins, isAllowedOrigin } = require('./utils/originPolicy');
 
 // ============================================
 // 1. CONFIGURATION DES VARIABLES D'ENVIRONNEMENT
@@ -40,17 +41,21 @@ const app = express();
 // 4. MIDDLEWARES DE SÉCURITÉ ET PERFORMANCE
 // ============================================
 app.use(helmet({
+    hsts: { maxAge: 31536000, includeSubDomains: false },
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // unsafe-inline and unsafe-eval for dev/React compatibility
+            baseUri: ["'self'"],
+            objectSrc: ["'none'"],
+            formAction: ["'self'"],
+            scriptSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "blob:"],
             connectSrc: [
                 "'self'",
                 "https://quizzapi.jomoreschi.fr",
-                "https://gestion-brown.vercel.app/api",
+                 "https://gestion-brown.vercel.app",
                 "https://gestion-stagiaire-backend.onrender.com"
             ],
             frameAncestors: ["'self'"], // Same as X-Frame-Options SAMEORIGIN
@@ -79,26 +84,31 @@ app.use(cookieParser());
 // 5. CONFIGURATION CORS DYNAMIQUE
 // ============================================
 const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:5000',
-    'http://localhost',
-    'capacitor://localhost',
     'https://frontend-five-drab-18.vercel.app',
+    'https://gestion-brown.vercel.app',
     'https://gestion-stagiaire-backend.onrender.com',
+    'capacitor://localhost',
     process.env.FRONTEND_URL,
     process.env.RENDER_EXTERNAL_URL
 ].filter(Boolean);
 
+const trustedOrigins = createTrustedOrigins(allowedOrigins, isProd);
+
+// CORS alone does not stop a browser from sending simple cross-site form requests.
+app.use((req, res, next) => {
+    if (!isProd || !['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+    const origin = req.get('Origin');
+    const fetchSite = req.get('Sec-Fetch-Site');
+    const cookieSessionWithoutSameOriginContext = Boolean(req.cookies?.token) && !origin && fetchSite !== 'same-origin';
+    if ((origin && !isAllowedOrigin(origin, trustedOrigins, isProd)) || (!origin && fetchSite === 'cross-site') || cookieSessionWithoutSameOriginContext) {
+        return res.status(403).json({ success: false, message: 'Origine non autorisée' });
+    }
+    next();
+});
+
 const corsOptions = {
     origin: function (origin, callback) {
-        // Autoriser Postman ou les outils locaux (!origin)
-        if (!origin || !isProd) return callback(null, true);
-
-        // Autoriser si l'origine est dans la liste ou finit par .vercel.app
-        const isAllowed = allowedOrigins.some(ao => origin.startsWith(ao)) ||
-            allowedOrigins.includes(origin) ||
-            origin.endsWith('.vercel.app');
+        const isAllowed = isAllowedOrigin(origin, trustedOrigins, isProd);
 
         if (isAllowed) {
             callback(null, true);
@@ -177,14 +187,14 @@ try {
     app.use('/api/admin', require('./routes/admin'));
     app.use('/api/stats', require('./routes/stats'));
     app.use('/api/notifications', require('./routes/notifications'));
+    app.use('/api/error-reports', require('./routes/errorReports'));
     app.use('/api/evaluations', require('./routes/evaluations'));
     app.use('/api/settings', require('./routes/settings'));
     app.use('/api/teams', require('./routes/teams'));
     app.use('/api/timesheet', require('./routes/timesheet'));
     app.use('/api/ai', require('./routes/ai'));
 
-    // Pour l'upload de CV/Documents
-    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+    // CVs and personal documents are served only by authenticated API routes.
     app.use('/api/uploads', require('./routes/uploads'));
 
     console.log('✅ Routes chargées');

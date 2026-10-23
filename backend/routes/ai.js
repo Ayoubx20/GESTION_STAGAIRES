@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/auth');
 const Task = require('../models/Task');
 const User = require('../models/User');
 const Intern = require('../models/Intern');
+const { getTaskUserScope } = require('../utils/taskAuthorization');
 
 /**
  * Helper to call Google Gemini API via REST with auto-model fallback
@@ -199,6 +200,16 @@ router.post('/chat', authMiddleware, async (req, res) => {
         const completedTasks = await Task.countDocuments({ assignedTo: user._id, status: 'completed' });
         userStats.pendingTasks = pendingTasks;
         userStats.completedTasks = completedTasks;
+      } else if (userRole === 'supervisor') {
+        const scope = await getTaskUserScope(user);
+        const scopedUserIds = [...scope];
+        const scopedUsers = { role: 'intern', _id: { $in: scopedUserIds } };
+        const totalInterns = await User.countDocuments(scopedUsers);
+        const pendingApprovals = await User.countDocuments({ ...scopedUsers, isApproved: false });
+        const openTasks = await Task.countDocuments({ assignedTo: { $in: scopedUserIds }, status: { $in: ['pending', 'in_progress'] } });
+        userStats.totalInterns = totalInterns;
+        userStats.pendingApprovals = pendingApprovals;
+        userStats.openTasks = openTasks;
       } else {
         const totalInterns = await User.countDocuments({ role: 'intern' });
         const pendingApprovals = await User.countDocuments({ role: 'intern', isApproved: false });

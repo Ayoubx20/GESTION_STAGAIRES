@@ -1,6 +1,16 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+function clearSessionCookie(res) {
+  if (typeof res.clearCookie === 'function') {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    });
+  }
+}
+
 module.exports = async (req, res, next) => {
   try {
     let token;
@@ -30,10 +40,25 @@ module.exports = async (req, res, next) => {
     }
 
     if (!user.isActive) {
+      clearSessionCookie(res);
       return res.status(401).json({ 
         success: false, 
         message: 'Ce compte a été désactivé' 
       });
+    }
+
+    if (user.role !== 'admin' && !user.isApproved) {
+      clearSessionCookie(res);
+      return res.status(403).json({
+        success: false,
+        message: 'Ce compte est en attente d’approbation'
+      });
+    }
+
+    // Incrementing tokenVersion revokes all previously issued access tokens.
+    if (Number(decoded.tokenVersion || 0) !== Number(user.tokenVersion || 0)) {
+      clearSessionCookie(res);
+      return res.status(401).json({ success: false, message: 'Session expirée. Veuillez vous reconnecter.' });
     }
 
     req.user = user;
@@ -42,6 +67,7 @@ module.exports = async (req, res, next) => {
     console.error('❌ Auth middleware error:', error.message);
     
     if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      clearSessionCookie(res);
       return res.status(401).json({ 
         success: false, 
         message: 'Token invalide ou expiré' 

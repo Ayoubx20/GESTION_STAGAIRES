@@ -7,27 +7,21 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.EMAIL_USER, // Votre email
     pass: process.env.EMAIL_PASS  // Votre mot de passe ou "App Password"
-  },
-  tls: {
-    rejectUnauthorized: false // Évite les blocages de certificats SSL sur certains réseaux/locaux
   }
 });
 
 // Fonction bach nsifto email
-const sendEmail = async (to, subject, html) => {
+const sendEmail = async (to, subject, html, { sensitive = false } = {}) => {
   const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
   const isConfigured = process.env.EMAIL_USER && process.env.EMAIL_PASS;
 
   if (!isConfigured) {
     if (isDev) {
+      if (sensitive) return false;
       console.log('----------------------------------------------------');
       console.log('⚠️  [SIMULATION EMAIL - MODE DEV] ⚠️');
       console.log(`Destinataire : ${to}`);
       console.log(`Sujet : ${subject}`);
-      const codeMatch = html.match(/>\s*(\d{6})\s*<\/span>/);
-      if (codeMatch) {
-        console.log(`🔢 Code détecté : ${codeMatch[1]}`);
-      }
       console.log('----------------------------------------------------');
       return true;
     }
@@ -47,36 +41,23 @@ const sendEmail = async (to, subject, html) => {
     console.log('✅ Email envoyé:', info.messageId);
     return true;
   } catch (error) {
-    console.error('❌ Erreur envoi email (tentative SMTP):', error);
-
-    // Écrire l'erreur détaillée dans un fichier log physique pour inspection
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const logMessage = `[${new Date().toISOString()}] Erreur envoi à ${to}: ${error.message}\nStack: ${error.stack}\n\n`;
-      fs.appendFileSync(path.join(__dirname, '../email-error.log'), logMessage);
-    } catch (logErr) {
-      console.error('Impossible d\'écrire dans email-error.log:', logErr);
-    }
+    console.error('Email delivery failed.');
 
     // En mode développement, si l'envoi SMTP échoue (ex: problème réseau, absence d'internet, identifiants invalides),
     // on bascule élégamment sur le mode simulation pour ne pas bloquer l'utilisateur/développeur.
     if (isDev) {
+      if (sensitive) return false;
       console.log('----------------------------------------------------');
       console.log('⚠️  [SMTP EN PANNE - BACKUP SIMULATION MODE DEV] ⚠️');
       console.log('L\'envoi réel a échoué, mais nous simulons pour ne pas vous bloquer.');
       console.log(`Destinataire : ${to}`);
       console.log(`Sujet : ${subject}`);
-      const codeMatch = html.match(/>\s*(\d{6})\s*<\/span>/);
-      if (codeMatch) {
-        console.log(`🔢 Code détecté : ${codeMatch[1]}`);
-      }
       console.log('----------------------------------------------------');
       return true;
     }
 
     // En production, on lève l'erreur pour la transmettre au contrôleur et l'afficher sur le frontend
-    throw error;
+    throw new Error('Email delivery failed');
   }
 };
 
@@ -240,7 +221,7 @@ const sendPasswordResetEmail = async (email, code) => {
       </p>
       
       <p style="color: #666; font-size: 16px; line-height: 1.5;">
-        Voici votre code de vérification à 6 chiffres (valable 1 heure) :
+        Voici votre code de vérification à 6 chiffres (valable 10 minutes) :
       </p>
       
       <div style="text-align: center; margin: 30px 0;">
@@ -255,7 +236,7 @@ const sendPasswordResetEmail = async (email, code) => {
     </div>
   `;
 
-  return await sendEmail(email, subject, html);
+  return await sendEmail(email, subject, html, { sensitive: true });
 };
 
 module.exports = {

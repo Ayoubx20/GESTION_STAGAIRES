@@ -59,7 +59,9 @@ const InternForm = () => {
     setLoading(true);
     try {
       if (id) {
-        await internService.update(id, formData);
+        const update = { ...formData };
+        if (user?.role !== 'admin') delete update.status;
+        await internService.update(id, update);
         toast.success('Stagiaire modifié avec succès');
       } else {
         await internService.create(formData);

@@ -87,6 +87,7 @@ router.put('/approve-intern/:id', auth, isAdmin, async (req, res) => {
 
     intern.isApproved = true;
     intern.isActive = true;
+    intern.tokenVersion = (intern.tokenVersion || 0) + 1;
     await intern.save();
 
     // Vérifier si le profil de stagiaire existe déjà pour éviter les doublons
@@ -105,6 +106,9 @@ router.put('/approve-intern/:id', auth, isAdmin, async (req, res) => {
         endDate: new Date(new Date().setMonth(new Date().getMonth() + 3)), // +3 mois par défaut
         status: 'active'
       });
+    } else {
+      existingInternProfile.status = 'active';
+      await existingInternProfile.save();
     }
 
     // Mettre à jour le statut de la candidature s'il existe
@@ -157,6 +161,16 @@ router.put('/reject-intern/:id', auth, isAdmin, async (req, res) => {
       });
     }
 
+    if (intern.role !== 'intern') {
+      return res.status(400).json({ success: false, message: 'Cet utilisateur n’est pas un stagiaire' });
+    }
+
+    // Rejection revokes every outstanding session and blocks future logins.
+    intern.isApproved = false;
+    intern.isActive = false;
+    intern.tokenVersion = (intern.tokenVersion || 0) + 1;
+    await intern.save();
+
     // Mettre à jour le statut de la candidature
     const Application = require('../models/Application');
     await Application.findOneAndUpdate(
@@ -174,8 +188,6 @@ router.put('/reject-intern/:id', auth, isAdmin, async (req, res) => {
       },
       { upsert: true, returnDocument: 'after' }
     );
-
-    // L'utilisateur reste isApproved: false et isActive: false
 
     // Mettre à jour les statistiques
     const SiteStat = require('../models/SiteStat');
@@ -206,6 +218,7 @@ router.put('/restore-intern/:id', auth, isAdmin, async (req, res) => {
   try {
     const intern = await User.findById(req.params.id);
     if (!intern) return res.status(404).json({ success: false, message: 'Non trouvé' });
+    if (intern.role !== 'intern') return res.status(400).json({ success: false, message: 'Cet utilisateur n’est pas un stagiaire' });
 
     const Application = require('../models/Application');
     await Application.findOneAndUpdate(
@@ -213,6 +226,11 @@ router.put('/restore-intern/:id', auth, isAdmin, async (req, res) => {
       { status: 'pending' },
       { upsert: true }
     );
+
+    intern.isApproved = false;
+    intern.isActive = false;
+    intern.tokenVersion = (intern.tokenVersion || 0) + 1;
+    await intern.save();
 
     res.json({
       success: true,

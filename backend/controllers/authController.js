@@ -8,9 +8,9 @@ const crypto = require('crypto');
 const { sendPasswordResetEmail } = require('../config/email');
 
 // Generate JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '30d'
+const generateToken = (id, tokenVersion = 0) => {
+  return jwt.sign({ id, tokenVersion }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || '1d'
   });
 };
 
@@ -29,7 +29,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    const { firstName, lastName, email, password, role, phone } = req.body;
+    const { firstName, lastName, email, password, phone } = req.body;
 
     // Vérification plus robuste de l'email
     const existingUser = await User.findOne({
@@ -49,13 +49,12 @@ exports.register = async (req, res) => {
       lastName: lastName.trim(),
       email: email.toLowerCase().trim(),
       password,
-      role: role || 'intern',
+      // Public registration must never grant a privileged role from client input.
+      role: 'intern',
       phone: phone ? phone.trim() : undefined,
       isActive: true,
-      isApproved: role === 'admin'
+      isApproved: false
     });
-
-    const token = generateToken(user._id);
 
     // Notifier tous les administrateurs
     try {
@@ -73,18 +72,11 @@ exports.register = async (req, res) => {
       console.error('Erreur notification admin:', notifErr);
     }
 
-    const cookieOptions = {
-      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-    };
+    console.log('✅ Inscription reçue et en attente d’approbation');
 
-    console.log('✅ Inscription réussie pour:', email);
-
-    res.status(201).cookie('token', token, cookieOptions).json({
+    res.status(201).json({
       success: true,
-      token,
+      message: 'Inscription reçue. Votre compte doit être approuvé avant connexion.',
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -124,7 +116,7 @@ exports.login = async (req, res) => {
     // Recherche avec email normalisé
     const user = await User.findOne({
       email: email.toLowerCase().trim()
-    }).select('+password');
+    }).collation({ locale: 'en', strength: 2 }).select('+password');
 
     if (!user) {
       console.log('❌ Utilisateur non trouvé');
@@ -163,7 +155,7 @@ exports.login = async (req, res) => {
 
     // Parallelize: update lastLogin + fetch/create settings simultaneously
     const UserSettings = require('../models/UserSettings');
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion || 0);
 
     const [, settings] = await Promise.all([
       User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } }),
@@ -175,7 +167,7 @@ exports.login = async (req, res) => {
     ]);
 
     const cookieOptions = {
-      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
@@ -183,9 +175,8 @@ exports.login = async (req, res) => {
 
     console.log('✅ Login réussi pour:', email);
 
-    res.status(200).cookie('token', token, cookieOptions).json({
+    const response = {
       success: true,
-      token,
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -201,7 +192,10 @@ exports.login = async (req, res) => {
           theme: settings?.theme
         }
       }
-    });
+    };
+    // Native Capacitor clients need a bearer token; browsers use only the HttpOnly cookie.
+    if (req.get?.('Origin') === 'capacitor://localhost') response.token = token;
+    res.status(200).cookie('token', token, cookieOptions).json(response);
 
   } catch (error) {
     console.error('❌ ERREUR SERVEUR DANS LOGIN:', error);
@@ -421,60 +415,38 @@ exports.registerWithCV = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Veuillez fournir un e-mail' });
-    }
+    const genericResponse = { success: true, message: 'Si cette adresse correspond à un compte, un code de réinitialisation sera envoyé.' };
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+resetPasswordRequestedAt');
+    if (user) {
+      if (user.resetPasswordRequestedAt && Date.now() - user.resetPasswordRequestedAt.getTime() < 60 * 1000) {
+        return res.status(200).json(genericResponse);
+      }
+      const resetCode = crypto.randomInt(100000, 1000000).toString();
+      user.resetPasswordToken = crypto.createHash('sha256').update(resetCode).digest('hex');
+      user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+      user.resetPasswordAttempts = 0;
+      user.resetPasswordRequestedAt = new Date();
+      await user.save({ validateBeforeSave: false });
 
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.error('❌ Configuration e-mail manquante dans les variables d\'environnement.');
-      return res.status(500).json({
-        success: false,
-        message: "Configuration e-mail manquante sur le serveur. Veuillez ajouter EMAIL_USER et EMAIL_PASS dans les variables d'environnement de votre projet de déploiement (Vercel, Render, etc.)."
-      });
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Aucun utilisateur avec cet e-mail' });
-    }
-
-    // Générer un code à 6 chiffres
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Hacher le code et le stocker avec expiration
-    user.resetPasswordToken = crypto
-      .createHash('sha256')
-      .update(resetCode)
-      .digest('hex');
-
-    // Expiration dans 1 heure
-    user.resetPasswordExpires = Date.now() + 3600000;
-
-    await user.save({ validateBeforeSave: false });
-
-    // Envoyer l'e-mail
-    try {
-      const emailSent = await sendPasswordResetEmail(user.email, resetCode);
-      if (!emailSent) {
+      try {
+        const sent = await sendPasswordResetEmail(user.email, resetCode);
+        if (!sent) {
+          user.resetPasswordToken = undefined;
+          user.resetPasswordExpires = undefined;
+          user.resetPasswordRequestedAt = undefined;
+          await user.save({ validateBeforeSave: false });
+        }
+      } catch (error) {
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
+        user.resetPasswordRequestedAt = undefined;
         await user.save({ validateBeforeSave: false });
-        return res.status(500).json({ success: false, message: "Impossible d'envoyer l'e-mail de réinitialisation" });
+        console.error('Password reset email delivery failed.');
       }
-
-      res.status(200).json({ success: true, message: 'E-mail de réinitialisation envoyé avec succès' });
-    } catch (err) {
-      console.error('Erreur lors de l\'envoi de l\'e-mail:', err);
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpires = undefined;
-      await user.save({ validateBeforeSave: false });
-      return res.status(500).json({ 
-        success: false, 
-        message: `Impossible d'envoyer l'e-mail de réinitialisation: ${err.message || err}` 
-      });
     }
+    return res.status(200).json(genericResponse);
   } catch (error) {
-    console.error('❌ ERREUR DANS FORGOTPASSWORD:', error);
+    console.error('Password reset request failed.');
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
@@ -498,10 +470,19 @@ exports.verifyResetCode = async (req, res) => {
     const user = await User.findOne({
       email: email.toLowerCase().trim(),
       resetPasswordToken,
-      resetPasswordExpires: { $gt: Date.now() }
-    });
+      resetPasswordExpires: { $gt: Date.now() },
+      resetPasswordAttempts: { $lt: 5 }
+    }).select('+resetPasswordAttempts');
 
     if (!user) {
+      await User.updateOne(
+        { email: email.toLowerCase().trim(), resetPasswordExpires: { $gt: Date.now() }, $or: [{ resetPasswordAttempts: { $lt: 5 } }, { resetPasswordAttempts: { $exists: false } }] },
+        { $inc: { resetPasswordAttempts: 1 } }
+      );
+      await User.updateOne(
+        { email: email.toLowerCase().trim(), resetPasswordExpires: { $gt: Date.now() }, resetPasswordAttempts: { $gte: 5 } },
+        { $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 } }
+      );
       return res.status(400).json({ success: false, message: 'Le code de vérification est invalide ou a expiré' });
     }
 
@@ -530,23 +511,36 @@ exports.resetPassword = async (req, res) => {
     const user = await User.findOne({
       email: email.toLowerCase().trim(),
       resetPasswordToken,
-      resetPasswordExpires: { $gt: Date.now() }
-    });
+      resetPasswordExpires: { $gt: Date.now() },
+      resetPasswordAttempts: { $lt: 5 }
+    }).select('+resetPasswordAttempts');
 
     if (!user) {
+      await User.updateOne(
+        { email: email.toLowerCase().trim(), resetPasswordExpires: { $gt: Date.now() }, $or: [{ resetPasswordAttempts: { $lt: 5 } }, { resetPasswordAttempts: { $exists: false } }] },
+        { $inc: { resetPasswordAttempts: 1 } }
+      );
+      await User.updateOne(
+        { email: email.toLowerCase().trim(), resetPasswordExpires: { $gt: Date.now() }, resetPasswordAttempts: { $gte: 5 } },
+        { $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 } }
+      );
       return res.status(400).json({ success: false, message: 'Le code de réinitialisation est invalide ou a expiré' });
     }
 
-    // Changer le mot de passe
-    user.password = password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    // Atomically consume the reset token so concurrent submissions cannot both succeed.
+    const claimedUser = await User.findOneAndUpdate(
+      { _id: user._id, resetPasswordToken, resetPasswordExpires: { $gt: Date.now() }, resetPasswordAttempts: { $lt: 5 } },
+      { $unset: { resetPasswordToken: 1, resetPasswordExpires: 1, resetPasswordRequestedAt: 1 }, $set: { resetPasswordAttempts: 0 }, $inc: { tokenVersion: 1 } },
+      { returnDocument: 'after' }
+    );
+    if (!claimedUser) return res.status(400).json({ success: false, message: 'Le code de réinitialisation est invalide ou a expiré' });
 
-    await user.save();
+    claimedUser.password = password;
+    await claimedUser.save();
 
     res.status(200).json({ success: true, message: 'Mot de passe réinitialisé avec succès' });
   } catch (error) {
-    console.error('❌ ERREUR DANS RESETPASSWORD:', error);
+    console.error('Password reset failed.');
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

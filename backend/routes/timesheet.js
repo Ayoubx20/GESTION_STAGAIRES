@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const Timesheet = require('../models/Timesheet');
+const mongoose = require('mongoose');
+const { getTaskUserScope } = require('../utils/taskAuthorization');
 
 // ─── Admin guard middleware ────────────────────────────────────────────────
 const adminOnly = (req, res, next) => {
@@ -56,7 +58,9 @@ router.post('/', auth, async (req, res) => {
 // @access  Admin / Supervisor
 router.get('/admin/all', auth, adminOnly, async (req, res) => {
   try {
-    const timesheets = await Timesheet.find({})
+    const scope = req.user.role === 'admin' ? null : await getTaskUserScope(req.user);
+    const query = scope === null ? {} : { user: { $in: [...scope] } };
+    const timesheets = await Timesheet.find(query)
       .populate('user', 'name email role department isActive')
       .lean();
 
@@ -78,6 +82,11 @@ router.get('/admin/all', auth, adminOnly, async (req, res) => {
 // @access  Admin / Supervisor
 router.get('/admin/:userId', auth, adminOnly, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.userId)) return res.status(400).json({ success: false, message: 'Identifiant invalide' });
+    if (req.user.role !== 'admin') {
+      const scope = await getTaskUserScope(req.user);
+      if (!scope.has(String(req.params.userId))) return res.status(403).json({ success: false, message: 'Accès non autorisé' });
+    }
     const timesheet = await Timesheet.findOne({ user: req.params.userId })
       .populate('user', 'name email role department')
       .lean();

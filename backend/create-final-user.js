@@ -1,51 +1,38 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const path = require('path');
-
-dotenv.config({ path: path.join(__dirname, '.env') });
 const User = require('./models/User');
 
-async function createFinalUser() {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connecté à MongoDB');
-
-    // Supprimer les anciens utilisateurs avec ces emails
-    await User.deleteOne({ email: 'admin@demo.com' });
-    await User.deleteOne({ email: 'demo@demo.com' });
-
-    // Créer un admin
-    const admin = await User.create({
-      firstName: 'Admin',
-      lastName: 'Principal',
-      email: 'admin@demo.com',
-      password: 'admin123',
-      role: 'admin',
-      phone: '0600000000'
-    });
-    console.log('✅ Admin créé: admin@demo.com / admin123');
-
-    // Créer un utilisateur simple
-    const user = await User.create({
-      firstName: 'Demo',
-      lastName: 'User',
-      email: 'demo@demo.com',
-      password: 'demo123',
-      role: 'intern',
-      phone: '0611111111'
-    });
-    console.log('✅ Utilisateur créé: demo@demo.com / demo123');
-
-    console.log('\n🎉 Utilisateurs créés avec succès !');
-    console.log('\n📧 Identifiants de connexion :');
-    console.log('1. Admin: admin@demo.com / admin123');
-    console.log('2. Utilisateur: demo@demo.com / demo123');
-
-  } catch (error) {
-    console.error('❌ Erreur:', error);
-  } finally {
-    await mongoose.disconnect();
+async function createInitialAccounts() {
+  if (process.env.ALLOW_INITIAL_ACCOUNT_SETUP !== 'true') throw new Error('Explicit setup confirmation is required.');
+  const { MONGODB_URI, INITIAL_ADMIN_EMAIL, INITIAL_ADMIN_PASSWORD, INITIAL_INTERN_EMAIL, INITIAL_INTERN_PASSWORD } = process.env;
+  if (![MONGODB_URI, INITIAL_ADMIN_EMAIL, INITIAL_ADMIN_PASSWORD, INITIAL_INTERN_EMAIL, INITIAL_INTERN_PASSWORD].every(Boolean) || INITIAL_ADMIN_PASSWORD.length < 16 || INITIAL_INTERN_PASSWORD.length < 16) {
+    throw new Error('Database and account setup variables are required; passwords must be at least 16 characters.');
   }
+  await mongoose.connect(MONGODB_URI);
+  const accounts = [
+    { firstName: 'Initial', lastName: 'Administrator', email: INITIAL_ADMIN_EMAIL, password: INITIAL_ADMIN_PASSWORD, role: 'admin', isApproved: true, isActive: true },
+    { firstName: 'Initial', lastName: 'Intern', email: INITIAL_INTERN_EMAIL, password: INITIAL_INTERN_PASSWORD, role: 'intern', isApproved: false, isActive: false }
+  ];
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      for (const account of accounts) {
+        account.email = account.email.toLowerCase().trim();
+        if (await User.exists({ email: account.email }).session(session)) throw new Error('An account already exists; no accounts were changed.');
+      }
+      await User.create(accounts, { session });
+    });
+  } finally {
+    await session.endSession();
+  }
+  console.log('Initial accounts created. Credentials were not printed.');
 }
 
-createFinalUser();
+createInitialAccounts()
+  .catch(() => {
+    console.error('Initial account setup failed. Check the required environment configuration.');
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    if (mongoose.connection.readyState) await mongoose.disconnect();
+  });

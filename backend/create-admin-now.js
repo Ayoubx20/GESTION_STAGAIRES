@@ -1,72 +1,36 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const dotenv = require('dotenv');
-const path = require('path');
+const User = require('./models/User');
 
-dotenv.config({ path: path.join(__dirname, '.env') });
-
-const userSchema = new mongoose.Schema({
-  firstName: String,
-  lastName: String,
-  email: String,
-  password: String,
-  role: String,
-  phone: String,
-  isActive: Boolean,
-  createdAt: Date
-});
-
-const User = mongoose.model('User', userSchema);
-
-async function createAdminNow() {
-  try {
-    // Connexion à MongoDB
-    console.log('🔄 Connexion à MongoDB...');
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connecté à MongoDB');
-
-    // Supprimer l'utilisateur s'il existe déjà
-    await User.deleteOne({ email: 'admin@demo.com' });
-    console.log('🗑️ Ancien utilisateur supprimé');
-
-    // Hasher le mot de passe
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('admin123', salt);
-
-    // Créer le nouvel admin
-    const admin = await User.create({
-      firstName: 'Admin',
-      lastName: 'Principal',
-      email: 'admin@demo.com',
-      password: hashedPassword,
-      role: 'admin',
-      phone: '0600000000',
-      isActive: true,
-      createdAt: new Date()
-    });
-
-    console.log('\n✅ ADMIN CRÉÉ AVEC SUCCÈS !');
-    console.log('📧 Email: admin@demo.com');
-    console.log('🔑 Mot de passe: admin123');
-    console.log('👤 Rôle: admin');
-    console.log('🆔 ID:', admin._id);
-
-    // Vérifions que le mot de passe est correct
-    const testUser = await User.findOne({ email: 'admin@demo.com' }).select('+password');
-    const isPasswordValid = await bcrypt.compare('admin123', testUser.password);
-    
-    if (isPasswordValid) {
-      console.log('\n✅ Vérification: Mot de passe correct !');
-    } else {
-      console.log('\n❌ Vérification: Problème avec le mot de passe');
-    }
-
-  } catch (error) {
-    console.error('❌ Erreur:', error);
-  } finally {
-    await mongoose.disconnect();
-    console.log('👋 Déconnecté de MongoDB');
+async function createInitialAdministrator() {
+  if (process.env.ALLOW_INITIAL_ACCOUNT_SETUP !== 'true') {
+    throw new Error('Set ALLOW_INITIAL_ACCOUNT_SETUP=true to explicitly enable one-time account setup.');
   }
+  const { MONGODB_URI, INITIAL_ADMIN_EMAIL, INITIAL_ADMIN_PASSWORD } = process.env;
+  if (!MONGODB_URI || !INITIAL_ADMIN_EMAIL || !INITIAL_ADMIN_PASSWORD || INITIAL_ADMIN_PASSWORD.length < 16) {
+    throw new Error('Database URI and administrator setup variables are required; the password must be at least 16 characters.');
+  }
+
+  await mongoose.connect(MONGODB_URI);
+  const exists = await User.exists({ email: INITIAL_ADMIN_EMAIL.toLowerCase().trim() });
+  if (exists) throw new Error('The requested administrator already exists; no account was changed.');
+  await User.create({
+    firstName: 'Initial',
+    lastName: 'Administrator',
+    email: INITIAL_ADMIN_EMAIL.toLowerCase().trim(),
+    password: INITIAL_ADMIN_PASSWORD,
+    role: 'admin',
+    isApproved: true,
+    isActive: true
+  });
+  console.log('Administrator account created. Credentials were not printed.');
 }
 
-createAdminNow();
+createInitialAdministrator()
+  .catch(() => {
+    console.error('Administrator setup failed. Check the required environment configuration.');
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    if (mongoose.connection.readyState) await mongoose.disconnect();
+  });

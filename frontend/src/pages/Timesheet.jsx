@@ -133,7 +133,7 @@ const Timesheet = ({ mode = 'normal' }) => {
     let periodYear = year;
     let periodMonth = month;
 
-    if (day < 20) {
+    if (day < 21) {
       periodMonth = month - 1;
       if (periodMonth < 0) {
         periodMonth = 11;
@@ -141,7 +141,7 @@ const Timesheet = ({ mode = 'normal' }) => {
       }
     }
 
-    return new Date(periodYear, periodMonth, 20);
+    return new Date(periodYear, periodMonth, 21);
   }, []);
 
   // Get today's period start
@@ -153,7 +153,7 @@ const Timesheet = ({ mode = 'normal' }) => {
   const getDaysInPeriod = useCallback(() => {
     const startYear = currentDate.getFullYear();
     const startMonth = currentDate.getMonth();
-    const start = new Date(startYear, startMonth, 20);
+    const start = new Date(startYear, startMonth, 21);
     const end = new Date(startYear, startMonth + 1, 20);
     const days = [];
     let current = new Date(start);
@@ -194,13 +194,13 @@ const Timesheet = ({ mode = 'normal' }) => {
   const handlePrevMonth = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() - 1;
-    setCurrentDate(new Date(year, month, 20));
+    setCurrentDate(new Date(year, month, 21));
   };
 
   const handleNextMonth = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
-    setCurrentDate(new Date(year, month, 20));
+    setCurrentDate(new Date(year, month, 21));
   };
 
   const handleResetMonth = () => {

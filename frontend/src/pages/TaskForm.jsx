@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { taskService } from '../services/tasks';
 import { internService } from '../services/interns';
+import { teamService } from '../services/teams';
 import { getAITaskSuggestions } from '../services/aiService';
 import { ArrowLeftIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -34,8 +35,15 @@ const TaskForm = () => {
 
   const fetchInterns = async () => {
     try {
-      const data = await internService.getAll();
-      setInterns(data);
+      const [data, teams] = await Promise.all([
+        internService.getAll({ limit: 1000 }),
+        isSupervisor ? teamService.getAll() : Promise.resolve([])
+      ]);
+      const teamInternIds = new Set((teams || []).flatMap((team) => team.interns || []).map((intern) => String(intern._id || intern)));
+      const scopedInterns = isSupervisor
+        ? data.filter((intern) => String(intern.supervisor?._id || intern.supervisor) === String(user?.id) || teamInternIds.has(String(intern._id)))
+        : data;
+      setInterns(scopedInterns);
     } catch (error) {
       toast.error('Erreur lors du chargement des stagiaires');
     }
