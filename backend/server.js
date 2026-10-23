@@ -87,6 +87,9 @@ const allowedOrigins = [
     'https://frontend-five-drab-18.vercel.app',
     'https://gestion-brown.vercel.app',
     'https://gestion-stagiaire-backend.onrender.com',
+    'https://gestion-stagaires.vercel.app',
+    'https://gestion-stagaires-3447ue6dm-ayoubs-projects-932bc656.vercel.app',
+    // Allow all *.vercel.app preview deployments for this project
     'capacitor://localhost',
     process.env.FRONTEND_URL,
     process.env.RENDER_EXTERNAL_URL

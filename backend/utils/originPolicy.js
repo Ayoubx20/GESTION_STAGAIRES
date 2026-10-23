@@ -22,7 +22,16 @@ function createTrustedOrigins(configuredOrigins, isProd) {
 function isAllowedOrigin(value, trustedOrigins, isProd) {
   if (!value || !isProd) return true;
   const origin = normalizeOrigin(value);
-  return origin !== null && trustedOrigins.has(origin);
+  if (origin === null) return false;
+  if (trustedOrigins.has(origin)) return true;
+  // Allow all Vercel preview deployments for this project
+  try {
+    const url = new URL(origin);
+    if (url.hostname.endsWith('.vercel.app')) return true;
+  } catch {
+    // ignore
+  }
+  return false;
 }
 
 module.exports = { normalizeOrigin, createTrustedOrigins, isAllowedOrigin };
